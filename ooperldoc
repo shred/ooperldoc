@@ -1,0 +1,1958 @@
+#!/usr/bin/perl
+# jedit :folding=explicit: :collapseFolds=1:
+
+##--------------------------------------------------------------------
+# NAME:
+#   OOPerlDoc
+#
+# PURPOSE:
+#   Create a HTML documentation out of multiple Perl files, especially
+#   if written in OOP. Anyhow, those Perl files must match the OOPerlDoc
+#   comment rules, see documentation.
+#
+# AUTHOR:
+#   Richard Körber <dev@shredzone.de>
+#
+# VERSION:
+#   V1.22 (2002-09-13) rkoerber
+#
+# CVS:
+#   $Id: ooperldoc,v 1.2 2005/11/18 11:09:55 shred Exp $
+#
+# HISTORY:
+#    V1.22 (2002-09-13) rkoerber
+#      - BUGFIX: OOPerlDoc was caught in an endless loop when
+#        a class only consisted of private methods
+#      - BUGFIX: Private attributes were not sorted properly to the
+#        end of the list
+#
+#    V1.21 (2002-07-09) rkoerber
+#      - Optionally, the class' source code can be added to the
+#        documentation. It is fully linked, but does not have
+#        a decent syntax highlighting yet.
+#      - Circular inheritance will now be detected and leads to
+#        an error instead of an endless loop. [Bug 1435]
+#
+#    V1.20 (2002-05-16) rkoerber
+#      - Added new block type CIPPOBJECT
+#      - Made OOPerlDoc a little more error tolerant (e.g.
+#        accepts RETURN, RETURNS and OUTPUT now).
+#
+#    V1.19 (2002-04-25) rkoerber
+#      - ':' is now optional for delimiting method names. If it
+#        is ommitted, the last word is taken (which is usually
+#        the method name). Anyhow you are encouraged to write a
+#        colon!
+#      - BUGFIX: when a class just had one private method or
+#        one private class method, ooperldoc would hang in an
+#        infinite loop. Fixed.
+#      - BUGFIX: Class list of certain packets was always empty.
+#
+#    V1.18 (2002-03-21) rkoerber
+#      - Class list by name now shows appropriate package path
+#      - Besides '::' now '.' are allowed as package delimiter
+#
+#    V1.17 (2002-01-31) rkoerber
+#      - Now you can select in a third frame, what package classes
+#        you want to see.
+#      - You can have a view of the class names only.
+#
+#    V1.16 (2002-01-31) rkoerber
+#      - BUGFIX: References to classes in Foo::Bar notation was broken
+#        since the very beginning. And no one noticed that...
+#      - Now also references to class methods like Foo::Bar->meth() is
+#        linked to the appropriate place.
+#      - If a class name itself is not known, it is searched in the
+#        current packet as well.
+#
+#    V1.15 (2002-01-31) rkoerber
+#      - Deprecated attribute of methods are now also listed in the
+#        method summary.
+#      - Private method and attribute names (starting with an underscore)
+#        are now at the bottom of the method and attribute summary
+#      - Attribute summary is now sorted and a little prettier (attribute
+#        name comes first, followed by modifiers in brackets)
+#      - Method summary sentence now ends with HTML tags or double
+#        newlines
+#
+#    V1.14 (2002-01-25) rkoerber
+#      - BUGFIX: THROWS was broken, now fixed again
+#
+#    V1.13 (2002-01-18) rkoerber
+#      - Charset iso-8859-1 set in header
+#
+#    V1.12 (2001-11-09) rkoerber
+#      - BUGFIX: when --private was set, the attribute section was
+#        always empty
+#      - Attribute section now looks like class method section, and
+#        shows appropriate colors for public/protected/private.
+#      - Minor BUGFIX with trimming some trailing spaces
+#
+#    V1.11 (2001-11-09) rkoerber
+#      - Lists all known direct subclasses
+#      - The superclasses summary now shows the overridden methods
+#      - The superclasses title now links to the appropriate class
+#
+#    V1.10 (2001-11-07) rkoerber
+#      - Generated HTML is using stylesheets now
+#      - Minor HTML optimizations
+#
+#    V1.9 (2001-11-06) rkoerber
+#      - Added NOTE in class and method headers, to show up important
+#        notes which should be read carefully.
+#
+#    V1.8 (2001-03-14) rkoerber
+#      - Translated the source and documentation into English. Improved
+#        documentation. Revision bumped to honor this changes.
+#      - Now, also URLs with parameters will be recognized and linked.
+#
+#    V1.7 (2001-02-06) rkoerber
+#      - EXTENDS now also allows to list more than one superclass. But
+#        OOPerlDoc only evaluates the first one for now.
+#      - Files and directories starting with '.' or '~' will now be
+#        ignored. A new option allows to read temporary files though.
+#      - REQUIRES added
+#      - BUGFIX: The treeview of superclasses contained the '????' at the
+#        wrong position when the superclass was not known.
+#
+#    V1.6 (2001-02-05) rkoerber
+#      - Attribute list: nbsp used on empty cells, so Netscape will render
+#        the table properly.
+#      - Improved layout for color markings of public, protected and
+#        private methods.
+#      - OOPerlDoc will bark now if HTML markup is used in a section that
+#        does not allow markup.
+#      - BUGFIX: recursive reading of directories was only one level deep 
+#      - CVS section added to class headers
+#
+#    V1.5 (2001-01-24) rkoerber
+#      - OPTIONAL added
+#      - BUGFIX: SINCE blocks were put out twice
+#
+#    V1.4 (2000-09-01) rkoerber
+#      - Color markings of public, protected and private methods
+#
+#    V1.3 (2000-08-30) rkoerber
+#      - Added empty line between two EXTRA comments
+#      - Creates links on methods like package::method() now, too
+#
+#    V1.2 (2000-08-25) rkoerber
+#      - BUGFIX: Superclass tree was in reversed order :)
+#
+#    V1.1 (2000-08-25) rkoerber
+#      - Added -t option to set a title
+#      - SINCE added
+#      - CLASS can be used as alias for NAME now
+#      - http links and undef will be recognized
+#      - BUGFIX: recursive directory scanning didn't work at all
+#
+#    V1.0 (2000-08-24) rkoerber
+#      - First release
+#
+# COPYRIGHT:
+#   OOPerlDoc is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+#
+#   OOPerlDoc is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with OOPerlDoc; if not, write to the Free Software
+#   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
+#   USA
+#
+# NOTE:
+#   OOPerlDoc was written by me for dimedis GmbH (http://www.dimedis.de).
+#   I want to thank Mr. Halling for giving me the permission to publish
+#   OOPerlDoc under GPL.
+#---------------------------------------------------------------------
+
+use strict;
+use DirHandle;
+use FileHandle;
+
+my $ver="1.22";
+
+#
+# Default path to put the HTML files to. No trailing slash!
+#
+my $output_path = ".";
+
+
+#
+# All classes which were found and parsed, will go here...
+# Key: Class name, Value: list of all comment blocks found in there
+#
+my %class_files;
+
+#
+# The file names of all classes which were found and parsed, will go here...
+# Key: Class name, Value: file name
+#
+my %class_filenames;
+
+my $current_class;
+my $current_packet;
+my $current_filename;
+my $private       = 0;
+my $verbose       = 0;
+my $temporary     = 0;
+my $force_rewrite = 0;
+my $sourcecode    = 0;
+my $title         = "OOPerlDoc generated document";
+
+
+##--------------------------------------------------------------------
+# EXTRA:
+#   Usage
+#
+# COMMENT:
+#   The parameter template is:<br>
+#   <code>OOPerlDoc [options] [dir [dir [...]]]</code>
+#   <p>
+#   Options are:
+#
+# HASHMAP:
+#   -h, --help      => Print help and exit
+#   -p, --private   => Also convert private methods
+#   -s, --source    => Add sourcecode to documentation
+#   -D, --dir [dir] => Output directory for HTML documents
+#   -v, --verbose   => Show names of parsed and generated files
+#   -O, --overwrite => Force to overwrite style sheet file
+#   -t, --title [title]  => Title of HTML documents
+#       --temp      => Also scan temporary files and drawers
+#
+#---------------------------------------------------------------------
+MAIN: {{{
+  my @directories;
+  my $param;
+  
+  while($param = shift) {
+    if($param eq "-h"  or  $param eq "--help") {
+      print_help();
+      exit;    
+    }elsif ($param eq "-p"  or  $param eq "--private") {
+      $private = 1;
+    }elsif ($param eq "-s"  or  $param eq "--source") {
+      $sourcecode = 1;
+    }elsif ($param eq "-D"  or  $param eq "--dir") {
+      $output_path = shift;
+    }elsif ($param eq "-v"  or  $param eq "--verbose") {
+      $verbose = 1;
+    }elsif ($param eq "-O"  or  $param eq "--overwrite") {
+      $force_rewrite = 1;
+    }elsif ($param eq "-t"  or  $param eq "--title") {
+      $title = shift;
+    }elsif ($param eq "--temp") {
+      $temporary = 1;
+    }else {
+      push(@directories,$param);
+    }
+  }
+  
+  print("OOPerlDoc V$ver -- http://www.shredzone.net/go/ooperldoc\n") if $verbose;
+  
+  push(@directories,".") if scalar(@directories) == 0;
+
+  foreach my $dir (@directories) {
+    print "Parsing source...\n" if $verbose;
+    eval {
+      parse_dir($dir);
+    };
+    die "Couldn't parse directory ${dir}: $@\n" if $@;
+  }
+
+  eval {
+    print "Writing index.html\n" if $verbose;
+    write_frame_html();
+  };
+  die "Couldn't write frame file: $@\n" if $@;
+  
+  eval {
+    write_style();
+  };
+  die "Couldn't write stylesheet: $@\n" if $@;
+
+  print "Generating documentation...\n" if $verbose;
+  foreach my $clazz (keys %class_files) {
+    $current_class = $clazz;
+    $clazz =~ /^(.*)(::|\.).*?$/;
+    $current_packet = $1;
+    print "  $clazz\n"  if $verbose;
+    eval {
+      write_html($class_files{$clazz});
+    };
+    die "In file ${clazz}: $@\n" if $@;
+  }
+  
+  eval {
+    print "Generating class list\n" if $verbose;
+    write_class_list();
+    write_classnames_list();
+    write_package_list();
+  };
+  die "Couldn't write class list: $@\n" if $@;
+  
+  if($sourcecode) {
+    eval {
+      print "Generating source codes\n" if $verbose;
+      mkdir "${output_path}/src", 0755;
+      foreach my $clazz (keys %class_files) {
+        print "  $clazz\n" if $verbose;
+        eval {
+          write_source($class_files{$clazz});
+        };
+        die "In file ${clazz}: $@\n" if $@;
+      }
+    };
+    die "Couldn't write source codes: $@\n" if $@;
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   print_help
+#
+# DESCRIPTION:
+#   Show help page
+#---------------------------------------------------------------------
+sub print_help {{{
+  print <<_HELP_
+OOPerlDoc V$ver
+Written by Richard "Shred" Körber, released under the GNU GPL
+http://www.shredzone.net/go/ooperldoc
+
+Usage: OOPerlDoc [options] [dir1 [dir2 [...]]]
+
+Options are:
+  -h         --help          This page
+  -s         --source        Add sourcecode to documentation
+  -t         --title [title] Title of HTML documents
+  -D [dir]   --dir [dir]     Specify output directory
+  -v         --verbose       Verbose output
+  -O         --overwrite     Force to overwrite style sheet file
+  -p         --private       Show private methods
+             --temp          Also parse temporary files
+
+_HELP_
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   parse_dir
+#
+# DESCRIPTION:
+#   Feeds all files in this directory to the parser, recursively.
+#   The result is put into the class hash.
+#
+# INPUT:
+#   $dir               -- Directory name
+#---------------------------------------------------------------------
+sub parse_dir {{{
+  my($dir) = @_;
+
+  my $dh = new DirHandle;
+  opendir($dh,$dir) or return;
+  my @allfiles = readdir($dh);
+  closedir($dh);
+  
+  foreach my $file (@allfiles) {
+    my $fn = "$dir/$file";
+    next if not -r $fn;
+    next if (not $temporary) and $file =~ /^[\.\~]/;
+    
+    if(-d $fn) {
+      next if $file =~ /^\.\.?$/;
+      parse_dir("$fn");
+    }else {
+      my @list = parse_doc($fn);
+      my $head_hr = find_header(\@list);
+      next if not defined $head_hr;
+      my $classname = strip_attributes($head_hr->{NAME});
+      $class_files{$classname} = \@list;
+      $class_filenames{$classname} = $fn;
+    }
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   parse_doc
+#
+# DESCRIPTION:
+#   Extracts all OOPerlDoc comments from a file and puts them into
+#   a list.
+#
+# INPUT:
+#   $name               -- File name
+#
+# RETURN:
+#   List of all comments in this file
+#---------------------------------------------------------------------
+sub parse_doc {{{
+  my ($name) = @_;
+  my @result;
+  my $fh = new FileHandle;
+  my $comment = "";
+  my $linenr = 0;
+  
+  print "  $name\n"  if $verbose;
+  
+  open($fh,$name) or die "Could not open source file ${name}: $!\n";
+  while(<$fh>) {
+    chomp;
+    $linenr++;
+    next if not /^\s*\#\#(\s|-|=)*$/;   # Search for start of comment block
+    my $firstline = $linenr;
+    my %list = parse_comment($fh,\$linenr);
+    $list{LINENUMBER} = $firstline;
+    push(@result,\%list);
+  }
+  close($fh);
+  
+  my $newresult_lr = process_cippobject(\@result);
+  
+  return @$newresult_lr;
+}}}
+
+##--------------------------------------------------------------------
+# METHOD:
+#   process_cippobject
+#
+# DESCRIPTION:
+#   Post-Processes a CIPPOBJECT block. It will create a virtual
+#   METHOD block for the CIPPOBJECT parameters. The CIPPOBJECT
+#   block is then cleaned up and renamed to a NAME block.
+#
+# INPUT:
+#   \@blocks      -- List reference of all blocks found.
+#
+# RETURN:
+#   \@blocks      -- List reference of post processed blocks
+#---------------------------------------------------------------------
+sub process_cippobject {{{
+  my $blocks_lr = shift;
+  my @newlist;
+
+  #--- Search for a CIPPOBJECT ---
+  foreach my $block_hr (@$blocks_lr) {
+    if( exists $block_hr->{CIPPOBJECT} ) {
+      #--- Create a METHOD block ---
+      my %meth;
+      $meth{METHOD}      = $block_hr->{CIPPOBJECT};
+      $meth{DESCRIPTION} = $block_hr->{PURPOSE};
+      $meth{NOTE}        = $block_hr->{NOTE}        if exists $block_hr->{NOTE};
+      $meth{INPUT}       = $block_hr->{INPUT}       if exists $block_hr->{INPUT};
+      $meth{OPTIONAL}    = $block_hr->{OPTIONAL}    if exists $block_hr->{OPTIONAL};
+      $meth{RETURN}      = $block_hr->{RETURN}      if exists $block_hr->{RETURN};
+      $meth{THROWS}      = $block_hr->{THROWS}      if exists $block_hr->{THROWS};
+      $meth{DEPRECATED}  = $block_hr->{DEPRECATED}  if exists $block_hr->{DEPRECATED};
+      
+      #--- Cleanup CIPPOBJECT ---
+      delete $block_hr->{NOTE};
+      delete $block_hr->{INPUT};
+      delete $block_hr->{OPTIONAL};
+      delete $block_hr->{RETURN};
+      delete $block_hr->{OUTPUT};
+      delete $block_hr->{THROWS};
+      
+      #--- Rename it ---
+      $block_hr->{NAME} = $block_hr->{CIPPOBJECT};
+      delete $block_hr->{CIPPOBJECT};
+      push(@newlist, $block_hr);
+      push(@newlist, \%meth);
+    }else {
+      push(@newlist, $block_hr);
+    }
+  }
+  
+  return \@newlist;
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   parse_comment
+#
+# DESCRIPTION:
+#   Read a block and return a hash with all sections found.
+#   The file handle has to be positioned at the beginning of
+#   the comment block.
+#
+# INPUT:
+#   $fh             -- Filehandle to read from
+#   \$linenr        -- Line number variable to increment
+#
+# RETURN:
+#   Hash containing all sections of this comment block.
+#---------------------------------------------------------------------
+sub parse_comment {{{
+  my($fh,$linenr) = @_;
+  my $command = "COMMENT";
+  my $section = "";
+  my %hash;
+  
+  while(<$fh>) {
+    chomp;
+    $$linenr++;
+    last if not /^\s*\#/;
+    /^\s*\#\s*(.*?)\s*$/;   # Extract text from comment
+    my $line = $1;
+    next if $line =~ /^(\s|-|=)*$/; # Skip empty lines
+    
+    if($line =~ /^([A-Z]+)\:?\s*$/) { # New command?
+      chomp $section;
+      $hash{$command} .= $section  if($section ne "");
+      $command = $1;
+      $command = "NAME" if $command eq "CLASS";
+      $command = "METHOD" if $command eq "FUNCTION";
+      $command = "RETURN" if $command eq "OUTPUT";
+      $command = "RETURN" if $command eq "RETURNS";
+      $command = "THROWS" if $command eq "THROW";
+      $section = "";
+    }else {
+      $line =~ /^\|?(.*)$/;   # Strip leading '|'
+      $section .= "$1\n";   # Else put text to current command
+    }
+  }
+
+  chomp $section;
+  $hash{$command} .= $section  if($section ne "");
+  return %hash;
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_html
+#
+# DESCRIPTION:
+#   Generates the documentation of a class, in HTML.
+#
+# INPUT:
+#   \@list_lr     -- List of all comments of a class
+#---------------------------------------------------------------------
+sub write_html {{{
+  my($list_lr) = @_;
+  my $head_hr = find_header($list_lr);
+  my $classname = strip_attributes($head_hr->{NAME});
+  my $filename = convert_classname($classname);
+  my $fh = new FileHandle;
+  $current_filename = $filename;
+
+  open($fh,">$output_path/$filename") or die "Couldn't write file ${output_path}/${filename}: $!\n";
+  print $fh <<_HEAD_END_;
+<html>
+<head>
+  <title>$classname -- $title</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<link rel="stylesheet" type="text/css" href="style.css" />
+<body>
+<div class="navigation"><a href="#class_outline">[Class Outline]</a>&nbsp;<a href="#class_summary">[Method Summary]</a>&nbsp;<a href="#class_attrs">[Attributes]</a>&nbsp;<a href="#class_methods">[Method Details]</a></div>
+<hr noshade />
+<div class="headline">$classname</div>
+_HEAD_END_
+
+  print $fh "<big><i>DEPRECATED</i></big> -- do not use in new code<br />\n"
+    if(has_attribute($head_hr->{NAME},"deprecated"));
+  
+  write_super_tree($fh,$head_hr);
+  write_derived_classes($fh,$classname);
+
+  print $fh "<hr noshade />\n<a name=\"class_outline\"></a>\n";
+  write_class_header($fh,$head_hr);
+  write_class_extras($fh,$list_lr);
+
+  print $fh "<hr noshade />\n<a name=\"class_summary\"></a>\n";
+  my $already_lr = [];
+  write_class_summary($fh,$list_lr,$already_lr);
+  write_super_summary($fh,$head_hr,$already_lr);
+
+  if( grep{ $_->{ATTRIBUTES} } @$list_lr ) {
+    print $fh "<hr noshade />\n<a name=\"class_attrs\"></a>\n";
+    write_class_attrs($fh,$list_lr);
+  }else {
+    print $fh "<a name=\"class_attrs\"></a>\n";
+  }
+
+  print $fh "<hr noshade />\n<a name=\"class_methods\"></a>\n";
+  write_class_methods($fh,$list_lr);
+
+  print $fh <<_FOOT_END_;
+<hr noshade />
+<div class="footer">Generated by OOPerlDoc V$ver -- <a href="http://www.shredzone.net/go/ooperldoc">http://www.shredzone.net/go/ooperldoc</a></div>
+</body>
+</html>
+_FOOT_END_
+
+  close($fh);
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_source
+#
+# DESCRIPTION:
+#   Prepares the source code of a class, in HTML.
+#
+# INPUT:
+#   \@list_lr     -- List of all comments of a class
+#---------------------------------------------------------------------
+sub write_source {{{
+  my($list_lr) = @_;
+  my $head_hr = find_header($list_lr);
+  my $classname = strip_attributes($head_hr->{NAME});
+  my $filename = convert_classname($classname);
+  my $fh = new FileHandle;
+
+  return if not exists $class_filenames{$classname};
+  my $srcname = $class_filenames{$classname};
+  
+  #--- Create a hash of all line numbers and according section names ---
+  my %catchlines;
+  foreach my $entry_hr (@$list_lr) {
+    next unless exists $entry_hr->{METHOD};
+    my $line = $entry_hr->{LINENUMBER};
+    $catchlines{$line} = strip_attributes($entry_hr->{METHOD});
+  }
+  
+  #--- Create file ---
+  open($fh,">$output_path/src/$filename") or die "Couldn't write file ${output_path}/src/${filename}: $!\n";
+  print $fh <<_HEAD_END_;
+<html>
+<head>
+  <title>Source of $classname -- $title</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<link rel="stylesheet" type="text/css" href="../style.css" />
+<body>
+<div class="navigation"><a href="../$filename">[Back]</a></div>
+<hr noshade />
+<div class="headline">$classname</div>
+<hr noshade />
+<pre>
+_HEAD_END_
+
+  #--- Parse Source code ---
+  my $srcfh = new FileHandle;
+  my $linenr = 0;
+  open($srcfh,"$srcname") or die "Couldn't read source file ${srcname}: $!\n";
+  while(<$srcfh>) {
+    chomp;
+    $linenr++;
+    if(exists $catchlines{$linenr}) {
+      print $fh "<a name=\"". $catchlines{$linenr} ."\"></a>";
+    }
+    
+    my $line = $_;
+      $line =~ s/\&/&amp;/g;
+      $line =~ s/\</&lt;/g;
+
+    if( $line =~ /^\s*\#/ ) {
+      $line =~ s/(\s*\#\s*)(
+                  NAME|CLASS|EXTENDS|PURPOSE|AUTHOR|COPYRIGHT|
+                  METHOD|DESCRIPTION|NOTE|INPUT|OPTIONAL|RETURN|THROWS|DEPRECATED|
+                  CIPPOBJECT|COMMENT|ATTRIBUTES|REQUIRES|VERSION|CVS|SINCE|SEE|
+                  EXTRA|COMMENT|HASHMAP
+                 )
+                /$1<span class=\"srcOOPDKwd\">$2<\/span>/gox;
+      $line = "<span class=\"srcCmt\">$line</span>";
+    }else {
+      $line =~ s/(\&lt\;.*?\>)/<span class=\"srcHtmlTag\">$1<\/span>/g;
+#LATER: the world is not yet ready for this amazing feature. ;-)
+#  Seriously, some fine tuning is necessary to get this working.
+#      $line =~ s/(\s*)(
+#                  my|use|no|sub|local|require|return|
+#                  if|elsif|else|unless|
+#                  and|or|not|
+#                  for|foreach|while|next|last|redo|goto|continue|
+#                  defined|exists|glob|int|ref|undef|
+#                  eval|die|exit|
+#                 )(\s+)
+#                /$1<span class=\"srcPerlKwd\">$2<\/span>$3/gox;
+    }
+    print $fh "$line\n";
+  }
+  close($srcfh);
+
+  print $fh <<_FOOT_END_;
+</pre>
+<hr noshade />
+<div class="footer">Generated by OOPerlDoc V$ver -- <a href="http://www.shredzone.net/go/ooperldoc">http://www.shredzone.net/go/ooperldoc</a></div>
+</body>
+</html>
+_FOOT_END_
+
+  close($fh);
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_class_header
+#
+# DESCRIPTION:
+#   Shows the class header
+#
+# INPUT:
+#   $fh         -- Output handle
+#   \%head_hr   -- header hash
+#---------------------------------------------------------------------
+sub write_class_header {{{
+  my($fh,$head_hr) = @_;
+  
+  die "No markup allowed in CLASS/NAME\n" if contains_html($head_hr->{NAME});
+  die "No markup allowed in EXTENDS\n" if contains_html($head_hr->{EXTENDS});
+
+  print $fh "<div class=\"classdef\">";
+  print $fh $head_hr->{NAME} . "<br />\n";
+  print $fh "extends " . parse_extends($head_hr->{EXTENDS}) . "<br />\n"  if exists $head_hr->{EXTENDS};
+  print $fh "</div><p>\n";
+  print $fh "<a href=\"src/$current_filename\">[Source]</a>\n<p>\n" if $sourcecode;
+  print $fh (create_links($head_hr->{PURPOSE}) . "<br />\n")  if exists $head_hr->{PURPOSE};
+  print $fh "</p>\n";
+  
+  
+  if(exists $head_hr->{NOTE}) {
+    print $fh "<dl><dt><b>Note:</b></dt><dd>";
+    print $fh (create_links($head_hr->{NOTE}));
+    print $fh "</dd></dl>\n";
+  }
+
+  if(exists $head_hr->{REQUIRES}) {
+    print $fh "<dl><dt><b>Requires:</b></dt><dd>";
+    print $fh (create_links($head_hr->{REQUIRES}));
+    print $fh "</dd></dl>\n";
+  }
+
+  if(exists $head_hr->{DEPRECATED}) {
+    print $fh "<dl><dt><b>Deprecated:</b></dt><dd>";
+    print $fh (create_links($head_hr->{DEPRECATED}));
+    print $fh "</dd></dl>\n";
+  }
+
+  if(exists $head_hr->{AUTHOR}) {
+    print $fh "<dl><dt><b>Author:</b></dt><dd>";
+    format_author($fh, $head_hr->{AUTHOR});
+    print $fh "</dd></dl>\n";
+  }
+
+  if(exists $head_hr->{VERSION}) {
+    print $fh "<dl><dt><b>Version:</b></dt><dd>";
+    print $fh $head_hr->{VERSION};
+    print $fh "</dd></dl>\n";
+  }
+
+  if(exists $head_hr->{CVS}) {
+    print $fh "<dl><dt><b>CVS-ID:</b></dt><dd>";
+    print $fh $head_hr->{CVS};
+    print $fh "</dd></dl>\n";
+  }
+
+  if(exists $head_hr->{SINCE}) {
+    die "No markup allowed in SINCE\n" if contains_html($head_hr->{SINCE});
+    print $fh "<dl><dt><b>Since:</b></dt><dd>";
+    print $fh $head_hr->{SINCE};
+    print $fh "</dd></dl>\n";
+  }
+ 
+  if(exists $head_hr->{SEE}) {
+    print $fh "<dl><dt><b>See Also:</b></dt><dd>";
+    print $fh (create_links($head_hr->{SEE}));
+    print $fh "</dd></dl>\n";
+  }
+ 
+  if(exists $head_hr->{COPYRIGHT}) {
+    print $fh "<dl><dt><b>Copyright:</b></dt><dd>";
+    print $fh $head_hr->{COPYRIGHT};
+    print $fh "</dd></dl>\n";
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_class_extras
+#
+# DESCRIPTION:
+#   Put out all EXTRA comment blocks, each in one table.
+#
+# INPUT:
+#   $fh         -- Output handle
+#   \%list_lr   -- List of all hashes of a class
+#---------------------------------------------------------------------
+sub write_class_extras {{{
+  my($fh,$list_lr) = @_;
+  
+  foreach my $entry (@$list_lr) {
+    next if not exists $entry->{EXTRA};
+    my $title = $entry->{EXTRA};
+    die "No markup allowed in EXTRA\n" if contains_html($title);
+    print $fh "<p><table border=\"1\" cellpadding=\"3\" cellspacing=\"0\" width=\"100%\">\n";
+    print $fh "<tr><td class=\"header\" colspan=\"2\">$title</td></tr>\n";
+
+    if(exists $entry->{COMMENT}) {
+      
+      print $fh "<tr><td colspan=\"2\">";
+      print $fh (create_links($entry->{COMMENT}));
+      print $fh "</td></tr>\n";
+    
+    }
+    
+    if (exists $entry->{HASHMAP}) {
+      
+      my($mapkey, $mapcontent);
+      my @lines = split(/\n/, $entry->{HASHMAP});
+      foreach my $line (@lines) {
+        if($line =~ /\=\>/) {
+          if($mapkey) {
+            print $fh "<tr><td>$mapkey</td><td>";
+            print $fh (create_links($mapcontent));
+            print $fh "</td></tr>\n";
+          }
+          ($mapkey,$mapcontent) = split(/\=\>/,$line);
+          $mapkey =~ s/^\s*(.*?)\s*$/$1/e;
+          $mapcontent .= " ";
+          die "No markup allowed in HASHMAP keys\n" if contains_html($mapkey);
+        }else {
+          $mapcontent .= $line . " ";
+        }
+      }
+      if($mapkey) {
+        print $fh "<tr><td>$mapkey</td><td>";
+        print $fh (create_links($mapcontent));
+        print $fh "</td></tr>\n"
+      }
+    }
+    
+    print $fh "</table></p>\n";
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_class_attrs
+#
+# DESCRIPTION:
+#   Write the ATTRIBUTES comment block
+#
+# INPUT:
+#   $fh             -- Output filehandle
+#   \%list_lr       -- List of all hashes of a class
+#---------------------------------------------------------------------
+sub write_class_attrs {{{
+  my($fh,$list_lr) = @_;
+  
+  foreach my $entry (@$list_lr) {
+    next if not exists $entry->{ATTRIBUTES};
+
+    my($mapkey, $mapcontent, $bgcolor, $bottom);
+    my %maplines;
+    my @lines = split(/\n/, $entry->{ATTRIBUTES});
+    foreach my $line (@lines) {
+      if($line =~ /\=\>/) {
+        if($mapkey ne "") {
+          $mapcontent =~ s/^\s*(.*?)\s*$/$1/e;
+          $mapkey =~ /\:\s*(.*)$/;
+          $maplines{$1} = {key => $mapkey, content => $mapcontent};
+        }
+        ($mapkey,$mapcontent) = split(/\=\>/,$line);
+        $mapkey =~ s/^\s*(.*?)\s*$/$1/e;
+        $mapcontent .= " ";
+        die "No markup allowed in ATTRIBUTES keys\n" if contains_html($mapkey);
+      }else {
+        $mapcontent .= $line . " ";
+      }
+    }
+    $mapcontent =~ s/^\s*(.*?)\s*$/$1/e;
+    if($mapkey ne "") {
+      $mapkey =~ /\:\s*(.*)$/;
+      $maplines{$1} = {key => $mapkey, content => $mapcontent};
+      $bottom = undef;
+    }else {
+      $bottom = $mapcontent; 
+    }
+    
+    my @keylist = sort keys %maplines;
+    if((scalar @keylist > 1) and (grep { /^[^\_]/ } @keylist)) {
+      push(@keylist, shift(@keylist)) while($keylist[0] =~ /^\_/);
+    }
+    
+    print $fh "<table border=\"1\" cellpadding=\"3\" cellspacing=\"0\" width=\"100%\">\n";
+    print $fh "<tr><td class=\"header\" colspan=\"2\">Class Attributes</td></tr>\n";
+
+    foreach my $key (@keylist) {
+      $mapkey = $maplines{$key}->{key};
+      $mapcontent = $maplines{$key}->{content};
+      if($private or not has_attribute($mapkey,"private")) {
+        $bgcolor = undef;
+        $bgcolor = "public"     if has_attribute($mapkey, "public");
+        $bgcolor = "protected"  if has_attribute($mapkey, "protected");
+        $bgcolor = "private"    if has_attribute($mapkey, "private");
+        print $fh "<tr><td width=\"10\"";
+        print $fh " class=\"$bgcolor\"" if $bgcolor;
+        print $fh ">&nbsp;</td><td width=\"*\"><dl><dt>";
+        if( $mapkey =~ /^(.*):\s*(.*?)$/ ) {
+          print $fh "<code><b>$2</b>&nbsp;($1)</code>";
+        }else {
+          print $fh "<code><b>$mapkey</b></code>";
+        }
+        print $fh "</dt><dd>$mapcontent</dd></dl></td></tr>\n";
+      }
+    }
+
+    print $fh "<tr><td width=\"10\">&nbsp;</td><td width=\"*\">$bottom</td></tr>\n" if defined $bottom;
+    print $fh "</table>\n";
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_class_summary
+#
+# DESCRIPTION:
+#   Output a list of all constructors and methods. Private methods
+#   are omitted unless requested by user.
+#
+# INPUT:
+#   $fh           -- Output file handle
+#   \@list_lr     -- List of all hashes of a class
+#   \@already_lr  -- List of all already known methods. They will
+#                    not be put out on superclasses. This list will
+#                    be expanded by this method.
+#---------------------------------------------------------------------
+sub write_class_summary {{{
+  my($fh,$list_lr,$already_lr) = @_;
+  my %condests;
+  my %instmethods;
+  my %classmethods;
+  
+  $already_lr = [] if not defined $already_lr;
+  
+  #---- Sort all methods into the hashes ----
+  foreach my $entry (@$list_lr) {
+    next if not exists $entry->{METHOD};
+    my $method = $entry->{METHOD};
+    next if not $private and has_attribute($method, "private");
+    my $mname = strip_attributes($method);
+    push(@$already_lr, $mname);
+
+    if(   has_attribute($method, "constructor")
+       or has_attribute($method, "destructor")) {
+      $condests{$mname} = $entry;
+    }else {
+      if(   has_attribute($method, "static")
+         or has_attribute($method, "hybrid")) {
+        $classmethods{$mname} = $entry;
+      }
+      if(not has_attribute($method, "static")) {
+        $instmethods{$mname} = $entry;
+      }
+    }
+  }
+
+  write_method_summary($fh,\%condests,"Constructor Summary");
+  write_method_summary($fh,\%classmethods,"Class Method Summary");
+  write_method_summary($fh,\%instmethods,"Method Summary");
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_method_summary
+#
+# DESCRIPTION:
+#   Output a summary for methods of a certain kind.
+#
+# INPUT:
+#   $fh            -- Output file handle
+#   \%method_hr    -- List of all hashes of a class
+#   $title         -- Title of that list
+#---------------------------------------------------------------------
+sub write_method_summary {{{
+  my($fh,$method_hr,$title) = @_;
+  return if scalar(keys %$method_hr) == 0;
+
+  print $fh "<table border=\"1\" cellpadding=\"3\" cellspacing=\"0\" width=\"100%\">\n";
+  print $fh "<tr><td class=\"header\" colspan=\"2\">$title</td></tr>\n";
+
+  my @keys = sort keys %$method_hr;
+  if((scalar @keys > 1) and (grep { /^[^\_]/ } @keys)) {
+    push(@keys, shift(@keys)) while($keys[0] =~ /^\_/);
+  }
+  
+  foreach my $key (@keys) {
+    my $bgcolor = undef;
+    $bgcolor = "public"     if has_attribute($method_hr->{$key}->{METHOD}, "public");
+    $bgcolor = "protected"  if has_attribute($method_hr->{$key}->{METHOD}, "protected");
+    $bgcolor = "private"    if has_attribute($method_hr->{$key}->{METHOD}, "private");
+    
+    print $fh "<tr><td width=\"10\"";
+    print $fh " class=\"$bgcolor\"" if $bgcolor;
+    print $fh ">&nbsp;</td><td width=\"*\"><code><a href=\"#$key\"><b>$key</b></a></code>";
+    print $fh "&nbsp;&nbsp;<small><b>DEPRECATED!</b></small>" if has_attribute($method_hr->{$key}->{METHOD}, "deprecated");
+    print $fh "<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n";
+    my $desc = $method_hr->{$key}->{DESCRIPTION};
+    if (defined $desc) {
+      ($desc, undef) = split(/(\.|\<|\n\n)/s, $desc, 2);
+      print $fh $desc.".";
+    }
+    print $fh "</td></tr>\n";
+  }
+  
+  print $fh "</table><br>";
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_class_methods
+#
+# DESCRIPTION:
+#   Write all class methods.
+#
+# INPUT:
+#   $fh           -- Output file handle
+#   \%list_lr     -- List of all hashes of a class
+#---------------------------------------------------------------------
+sub write_class_methods {{{
+  my($fh,$list_lr) = @_;
+  my $first = 1;
+  
+  foreach my $entry (@$list_lr) {
+    next if not exists $entry->{METHOD};
+    next if not $private and has_attribute($entry->{METHOD},"private");
+    die "No markup allowed in METHOD/FUNCTION\n" if contains_html($entry->{METHOD});
+    
+    print $fh "<hr noshade />\n" if not $first;
+    $first = 0;
+   
+    my $name = strip_attributes($entry->{METHOD});
+    
+    print $fh "<div class=\"method\"><a name=\"$name\">$name</a></div>";
+    print $fh "&nbsp;&nbsp;&nbsp;<font size=\"-1\"><i>DEPRECATED</i> -- do not use in new code</font>"
+      if has_attribute($entry->{METHOD},"deprecated");
+    
+    print $fh "\n<dl><dt><code>".$entry->{METHOD}."</code></dt><dd>\n";
+
+    print $fh "<p>\n<a href=\"src/${current_filename}#${name}\">[Source]</a>\n" if $sourcecode;
+    
+    print $fh "<p>".create_links($entry->{DESCRIPTION})."</p>\n" if exists $entry->{DESCRIPTION};
+    
+    if(exists $entry->{NOTE}) {
+      print $fh "<dl><dt><b>Note:</b></dt><dd>";
+      print $fh (create_links($entry->{NOTE}));
+      print $fh "</dd></dl>\n";
+    }
+        
+    if(exists $entry->{INPUT}) {
+      print $fh "<dl><dt><b>Input:</b></dt><dd>";
+      format_input($fh,$entry->{INPUT});
+      print $fh "</dd></dl>\n";
+    }
+    
+    if(exists $entry->{OPTIONAL}) {
+      print $fh "<dl><dt><b>Optional:</b></dt><dd>";
+      format_input($fh,$entry->{OPTIONAL});
+      print $fh "</dd></dl>\n";
+    }
+
+    if(exists $entry->{RETURN}) {
+      print $fh "<dl><dt><b>Return:</b></dt><dd>";
+      format_return($fh,$entry->{RETURN});
+      print $fh "</dd></dl>\n";
+    }
+
+    if(exists $entry->{THROWS}) {
+      print $fh "<dl><dt><b>Throws:</b></dt><dd>";
+      format_throws($fh, $entry->{THROWS});
+      print $fh "</dd></dl>\n";
+    }
+ 
+    if(exists $entry->{AUTHOR}) {
+      print $fh "<dl><dt><b>Author:</b></dt><dd>";
+      format_author($fh, $entry->{AUTHOR});
+      print $fh "</dd></dl>\n";
+    }
+    
+    if(exists $entry->{VERSION}) {
+      print $fh "<dl><dt><b>Version:</b></dt><dd>";
+      print $fh $entry->{VERSION};
+      print $fh "</dd></dl>\n";
+    }
+
+    if(exists $entry->{SINCE}) {
+      die "No markup allowed in SINCE\n" if contains_html($entry->{SINCE});
+      print $fh "<dl><dt><b>Since:</b></dt><dd>";
+      print $fh $entry->{SINCE};
+      print $fh "</dd></dl>\n";
+    }
+
+    if(exists $entry->{SEE}) {
+      print $fh "<dl><dt><b>See Also:</b></dt><dd>";
+      print $fh (create_links($entry->{SEE}));
+      print $fh "</dd></dl>\n";
+    }
+
+    if(exists $entry->{DEPRECATED}) {
+      print $fh "<dl><dt><b>Deprecated:</b></dt><dd>";
+      print $fh (create_links($entry->{DEPRECATED}));
+      print $fh "</pre></dd></dl>\n";
+    }
+    print $fh "</dd></dl>\n";
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_derived_classes
+#
+# DESCRIPTION:
+#   List all known classes that are derived from this class.
+#
+# INPUT:
+#   $fh               -- Output file handle
+#   $classname        -- Class Name
+#---------------------------------------------------------------------
+sub write_derived_classes {{{
+  my($fh,$classname) = @_;
+  my @result;
+  my @result2;
+
+  foreach my $tstname (keys %class_files) {
+    my $classlist = find_list_by_classname($tstname);
+    if(defined $classlist) {
+      my $super_header = find_header($classlist);
+      if(defined $super_header) {
+        foreach my $superclass (parse_extends($super_header->{EXTENDS})) {
+          if(strip_attributes($superclass) eq $classname) {
+            push(@result, $tstname);
+          }
+        }
+      }
+    }
+  }
+  
+  if(scalar @result) {
+    @result = map { "<a href=\"". convert_classname($_) ."\">$_</a>" } sort @result;
+    print $fh "<dl><dt><b>Direct Known Subclasses:</b></dt><dd>". join(", ", @result) ."</dd></dl>\n";
+  }
+
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_super_tree
+#
+# DESCRIPTION:
+#   Shows a tree of all super classes. Currently, multiple inheritance
+#   is not supported.
+#
+# INPUT:
+#   $fh               -- Output file handle
+#   \%head_hr         -- Header hash
+#---------------------------------------------------------------------
+sub write_super_tree {{{
+  my($fh,$head_hr) = @_;
+  my @tree = ();
+  my $nestcnt = 0;
+  my %seen;
+  
+  _rec_super_tree($head_hr,\@tree,\%seen);
+
+  print $fh "<pre class=\"tree\">\nUNIVERSAL\n";
+  foreach my $node (@tree) {
+    print $fh "  " . "    " x $nestcnt . "|\n";
+    print $fh "  " . "    " x $nestcnt;
+    if(not defined $node) {
+      print $fh "+--<i>????</i>\n";
+    }else {
+      if(knows_classname($node)) {
+        print $fh "+--<a href=\"" . convert_classname($node) . "\">$node</a>\n";
+      }else {
+        print $fh "+--$node\n";
+      }
+    }
+    $nestcnt++;  
+  }
+  
+  print $fh "  " . "    " x $nestcnt . "|\n";
+  print $fh "  " . "    " x $nestcnt . "+--<b>" . strip_attributes($head_hr->{NAME}) . "</b>\n";
+  print $fh "</pre>\n";
+}}}
+sub _rec_super_tree {{{
+  my($head_hr,$tree_lr,$seen_hr) = @_;
+  if(exists $head_hr->{EXTENDS}) {
+    my @supers = parse_extends($head_hr->{EXTENDS});
+#TODO: Support multiple inheritance
+    my $extends = $supers[0];
+    $extends = strip_attributes($extends);
+    die("Class \"$extends\" is inherited from itself") if $seen_hr->{$extends};
+    $seen_hr->{$extends} = 1;
+    return if $extends eq "UNIVERSAL";
+    unshift(@$tree_lr, $extends);
+    my $classlist = find_list_by_classname($extends);
+    if(defined $classlist) {
+      my $super_header = find_header($classlist);
+      if(defined $super_header) {
+        my $name = strip_attributes($super_header->{NAME});
+        _rec_super_tree($super_header,$tree_lr,$seen_hr);
+        return;
+      }
+    }
+    unshift(@$tree_lr, undef);
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_super_summary
+#
+# DESCRIPTION:
+#   Writes a summary of all methods of this class' superclasses.
+#   Private methods are omitted unless requested by user.
+#
+# INPUT:
+#   $fh             -- Output file handle
+#   \%head_hr       -- Reference to the head hash
+# 
+# OPTIONAL:
+#   \@already       -- Ref to list of already known methods. Those
+#                      methods will not be written any more. This
+#                      list will be expanded by this method.
+#   \%seen          -- List of class names already seen
+#---------------------------------------------------------------------
+sub write_super_summary {{{
+  my ($fh,$head_hr,$already_lr,$seen_hr) = @_;
+  return if not defined $head_hr;
+  my @overridden;
+ 
+  $already_lr = [] if not defined $already_lr;
+  $seen_hr    = {} if not defined $seen_hr;
+  
+  if(exists $head_hr->{EXTENDS}) {
+    my @supers = parse_extends($head_hr->{EXTENDS});
+    my $extends = $supers[0];
+#TODO: Support multiple inheritance
+    $extends = strip_attributes($extends);
+    die("Class \"$extends\" is inherited from itself") if $seen_hr->{$extends};
+    $seen_hr->{$extends} = 1;
+    return if $extends eq "UNIVERSAL";
+    my $classlist = find_list_by_classname($extends);
+    return if not defined $classlist;
+    my $super_head_hr = find_header($classlist);
+    my $name = strip_attributes($super_head_hr->{NAME});
+    my $classfile = convert_classname($name);
+    
+    my @methods;
+    my @meth_out;
+    foreach my $entry (@$classlist) {
+      next if not exists $entry->{METHOD};
+      next if not $private and has_attribute($entry->{METHOD},"private");
+      push(@methods, strip_attributes($entry->{METHOD}));
+    }
+
+    foreach my $meth (sort @methods) {
+      my $linkcode = "<a href=\"$classfile#$meth\">$meth</a>";
+      if(grep { $_ eq "$meth" } @$already_lr) {
+        push(@overridden,$linkcode);
+        next;
+      }else {
+        push(@meth_out,$linkcode);
+        push(@$already_lr, $meth);
+      }
+    }
+    
+    print $fh "<p><table border=\"1\" cellpadding=\"3\" cellspacing=\"0\" width=\"100%\">\n";
+    print $fh "<tr><td class=\"subheader\" colspan=\"2\">Methods inherited from ";
+    print $fh "<a href=\"$classfile\" class=\"subheaderlink\">$name</a>";
+    print $fh "</td></tr>\n";
+    if(scalar @meth_out) {
+      print $fh "<tr><td><code>";
+      print $fh join(", ",@meth_out);
+      print $fh "</code></td></tr>\n";
+    }
+    if(scalar @overridden) {
+      print $fh "<tr><td class=\"smaller\">Overridden: <code>";
+      print $fh join(", ",@overridden);
+      print $fh "</code></td></tr>\n";
+    }
+    print $fh "</table></p>\n";
+    write_super_summary($fh,$super_head_hr,$already_lr,$seen_hr);
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   format_author
+#
+# DESCRIPTION:
+#   Formats the AUTHOR section.
+#
+# INPUT:
+#   $fh             -- Output file handle
+#   $input          -- Content of the AUTHOR section
+#---------------------------------------------------------------------
+sub format_author {{{
+  my($fh,$author) = @_;
+  my @authors = split(/(\n|\,)/,$author);
+  
+  foreach my $auth (@authors) {
+    $auth =~ /^\s*(.*?)\s*$/;
+    $auth = $1;
+    next if $auth eq "";
+    $auth =~ /\<(.*?)\>/;
+    my $mail = $1;
+    $auth =~ s/\</&lt;/g;
+    $auth =~ s/\>/&gt;/g;
+    
+    print $fh "<a href=\"mailto:$mail\">" if $mail;
+    print $fh $auth;
+    print $fh "</a>" if $mail;
+    print $fh "<br />\n";
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   format_input
+#
+# DESCRIPTION:
+#   Format an INPUT and OPTIONAL section.
+#
+# INPUT:
+#   $fh             -- Output file handle
+#   $input          -- Content of the section
+#
+# THROWS:
+#   "No markup allowed in INPUT/OPTIONAL/RETURN" -- HTML markup is
+#       not allowed in variable names
+#---------------------------------------------------------------------
+sub format_input {{{
+  my($fh,$input) = @_;
+  my $linecache = "";
+  my $createddl = 0;
+  
+  my @lines = split(/\n/,$input);
+  foreach my $line (@lines) {
+    if($line =~ /^\s*(\\?[\$\@\%\&\*]?\w+)\s+(\-\-|\=\>)\s+(.*)$/) {
+      my($varname,$remain) = ($1,$3);
+      die "No markup allowed in INPUT/OPTIONAL/RETURN\n" if contains_html($varname);
+      print $fh (create_links($linecache)) if $linecache;
+      $linecache = $remain." \n";
+      print $fh "</dd></dl>" if $createddl;
+      print $fh "<dl><dt><code>$varname</code></dt><dd>";
+      $createddl = 1;
+    }else {
+      $linecache .= $line." \n";
+    }
+  }
+  print $fh (create_links($linecache)) if $linecache;
+  print $fh "</dd></dl>" if $createddl;
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   format_return
+#
+# DESCRIPTION:
+#   Format a RETURN section. Currently it is just passed to
+#   <code>format_input</code>.
+#
+# INPUT:
+#   $fh             -- Output file handle
+#   $input          -- Content of RETURN section
+#---------------------------------------------------------------------
+sub format_return {{{
+  format_input(@_);
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   format_throws
+#
+# DESCRIPTION:
+#   Format a THROWS section.
+#
+# INPUT:
+#   $fh             -- Output file handle
+#   $input          -- Content of THROWS section
+#
+# THROWS:
+#   "No markup allowed in THROWS" -- HTML markup is not allowed in
+#       the THROWS text.
+#---------------------------------------------------------------------
+sub format_throws {{{
+  my($fh,$input) = @_;
+  my $linecache = "";
+  my $createddl = 0;
+  
+  my @lines = split(/\n/,$input);
+  foreach my $line (@lines) {
+    if($line =~ /^(.*?)\s+\-\-(.*)$/) {
+      my($varname,$remain) = ($1,$2);
+      die "No markup allowed in THROWS\n" if contains_html($varname);
+      print $fh (create_links($linecache)) if $linecache;
+      $linecache = $remain." \n";
+      print $fh "</dd></dl>" if $createddl;
+      $varname =~ /^[\"\']?(.*?)[\"\']?$/;
+      print $fh "<dl><dt><i>$1</i></dt><dd>";
+      $createddl = 1;
+    }else {
+      $linecache .= $line." \n";
+    }
+  }
+  print $fh (create_links($linecache)) if $linecache;
+  print $fh "</dd></dl>" if $createddl;
+}}}
+
+ 
+##--------------------------------------------------------------------
+# METHOD:
+#   parse_extends
+#
+# DESCRIPTION:
+#   Splits an EXTENDS section and generate a list of superclasses.
+#
+# INPUT:
+#   $extends        -- Content of the EXTENDS section
+#
+# RETURN:
+#   Scalar  -- List of all superclasses, separated by comma
+#   Array   -- List of all superclasses
+#---------------------------------------------------------------------
+sub parse_extends {{{
+  my $extends = shift;
+  my @supers;
+  
+  foreach my $str ( split( /[,\n\r\f]/, $extends ) ) {
+    $str =~ s/^\s*(.*?)\s*$/$1/e;
+    next if $str eq "";
+    push(@supers,$str);
+  }
+
+  return @supers if wantarray;
+  return join(", ", @supers);
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   knows_classname
+#
+# DESCRIPTION:
+#   Checks if the class name is known.
+#
+# INPUT:
+#   $classname      -- Name of the class to be checked.
+#
+# RETURN:
+#   def: exists, undef: does not exist
+#---------------------------------------------------------------------
+sub knows_classname {{{
+  my($classname) = @_;
+  return exists $class_files{$classname};
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   find_list_by_classname
+#
+# DESCRIPTION:
+#   Fetches a list of comments to a class. undef if the class name
+#   is not known.
+#
+# INPUT:
+#   $classname      -- Name of class to fetch comments from
+#
+# RETURN:
+#   List of comments, or undef
+#---------------------------------------------------------------------
+sub find_list_by_classname {{{
+  my($classname) = @_;
+  return $class_files{$classname};
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   create_links
+#
+# DESCRIPTION:
+#   Create links to known class names in a text. If a known class
+#   name has been found in the text, a link will be wrapped around
+#   it.
+#   <p>
+#   Additionally, undef will be formatted, and http URLs will be
+#   linked.
+#
+# INPUT:
+#   $text       -- Text to be scanned
+#
+# RETURN:
+#   Converted text
+#---------------------------------------------------------------------
+sub create_links {{{
+  my($text) = @_;
+  
+  $text =~ s/\b(\w+(::\w+)*(\-\>\w+(\(\))?)?)/try_replace($1)/seg;
+  $text =~ s/\bundef/<span class="undef">undef<\/span>/sg;
+  $text =~ s/\b((http|https|ftp|mailto)\:[a-zA-Z0-9\.\_\-\/\:\@\%\?\&\+\=]+)/<a href=\"$1\">$1<\/a>/sg;
+  return $text;
+}}}
+sub try_replace {{{
+  my($text) = @_;
+  
+  if($text =~ /\-\>/) {
+    $text =~ /^(.*)\-\>(.*?)(\(\))?$/;
+    my($clss,$mth) = ($1,$2);
+    $clss = $current_packet."::".$clss if not knows_classname($clss);
+    return $text if not knows_classname($clss);
+    my $file = convert_classname($clss);
+    return "<a href=\"$file#$mth\">$text</a>";
+  }else {
+    my $clss = $text;
+    $clss = $current_packet."::".$clss if not knows_classname($clss);
+    return $text if not knows_classname($clss);
+    my $file = convert_classname($clss);
+    return "<a href=\"$file\">$text</a>";
+  } 
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   find_header
+#
+# DESCRIPTION:
+#   Searches for the class header in a list of comments.
+#
+# INPUT:
+#   \@list_lr     -- List of all comments
+#
+# RETURN:
+#   Hash reference to the hash of the header comment
+#---------------------------------------------------------------------
+sub find_header {{{
+  my($list_lr) = @_;
+  foreach my $hash_hr (@$list_lr) {
+    return $hash_hr if exists $hash_hr->{NAME};
+  }
+  return undef;
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   contains_html
+#
+# DESCRIPTION:
+#   Check if a string contains HTML markup
+#
+# INPUT:
+#   $str        -- String to be tested
+#
+# RETURN:
+#   def:contains HTML markup, undef: plain text
+#---------------------------------------------------------------------
+sub contains_html {{{
+  my $str = shift;
+  return( $str =~ /\<.*?\>/g ? 1 : undef );
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   has_attribute
+#
+# DESCRIPTION:
+#   Checks if a class/method name contains a certain attribute.
+#
+# INPUT:
+#   $name       -- Content of NAME or METHOD comment
+#   $attr       -- Attribute to be found
+#
+# RETURN:
+#   def:contains this attribute, undef: does not contain
+#---------------------------------------------------------------------
+sub has_attribute {{{
+  my($name,$attr) = @_;
+  return undef if $name !~ /\S+\s+\S+/;
+  $name =~ /^(.*?)\:?\s+(\S+)$/;
+  my @attrlist = split(" ",$1);
+  return grep(/^$attr$/, @attrlist);
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   strip_attributes
+#
+# DESCRIPTION:
+#   Get the plain class/method name. Attributes will be stripped.
+#
+# INPUT:
+#   $name       -- Content of NAME or METHOD comment
+#
+# RETURN:
+#   Class/Method name with stripped attributes
+#---------------------------------------------------------------------
+sub strip_attributes {{{
+  my($name) = @_;
+  
+  if($name =~ /\:(?!\:)\s+/) {
+    $name =~ /\:(?!\:)\s+(\S+)/;
+    return($1);
+  }else {
+    $name =~ /(\S+)(\(.*\))?$/;
+    return($1);
+  }
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   convert_classname
+#
+# DESCRIPTION:
+#   Converts a class name into a file name. The resulting file name
+#   will always be the same if the same class name is given. This is
+#   done by converting all '::' into '.'. After that, a '.html' suffix
+#   is attached.
+#
+# INPUT:
+#   $name       -- Class name
+#
+# RETURN:
+#   File name of that class
+#---------------------------------------------------------------------
+sub convert_classname {{{
+  my($name) = @_;
+  $name =~ s/::/\./g;
+  return("$name.html");
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_class_list
+#
+# DESCRIPTION:
+#   Generate a HTML file, which contains the names of all classes,
+#   in alphabetical order.
+#---------------------------------------------------------------------
+sub write_class_list {{{
+  my $fh = new FileHandle;
+  
+  open($fh,">$output_path/index_allclasses.html") or die "Couldn't write index_allclasses.html: $!\n";
+  print $fh <<_LIST_END_;
+<html>
+<head>
+  <title>$title -- Class list</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<link rel="stylesheet" type="text/css" href="style.css">
+<body>
+<div class="classlist"><nobr>
+_LIST_END_
+
+  foreach my $clazz (sort keys %class_files) {
+    my $file = convert_classname($clazz);
+    print $fh "<a href=\"$file\" target=\"content\">$clazz</a><br>\n";
+  }
+
+  print $fh <<_LIST_BOTTOM_;
+</nobr></div>
+</body>
+</html>
+_LIST_BOTTOM_
+
+  close($fh);
+}}}
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_classnames_list
+#
+# DESCRIPTION:
+#   Generate a HTML file, which contains the names of all classes,
+#   in alphabetical order.
+#---------------------------------------------------------------------
+sub write_classnames_list {{{
+  my $fh = new FileHandle;
+  
+  open($fh,">$output_path/index_allnames.html") or die "Couldn't write index_allnames.html: $!\n";
+  print $fh <<_LIST_END_;
+<html>
+<head>
+  <title>$title -- Class Names list</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<link rel="stylesheet" type="text/css" href="style.css">
+<body>
+<div class="classlist"><nobr>
+_LIST_END_
+
+  my %classnames;
+  foreach my $clazz (keys %class_files) {
+    if($clazz =~ /^(.*)(::|\.)(.*?)$/) {
+      $classnames{$clazz} = "$3#$1";
+    }else {
+      $classnames{$clazz} = "$clazz#";
+    }
+  }
+  
+  foreach my $clazz (sort { $classnames{$a} cmp $classnames{$b} } keys %classnames) {
+    my $file = convert_classname($clazz);
+    my $name = $classnames{$clazz};
+    $name =~ /^(.*)#(.*)$/;
+    print $fh "<a href=\"$file\" target=\"content\">$1</a> -- $2<br>\n";
+  }
+
+  print $fh <<_LIST_BOTTOM_;
+</nobr></div>
+</body>
+</html>
+_LIST_BOTTOM_
+
+  close($fh);
+}}}
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_package_list
+#
+# DESCRIPTION:
+#   Generate a HTML file, which contains the names of all classes,
+#   in alphabetical order.
+#---------------------------------------------------------------------
+sub write_package_list {{{
+  my $fh = new FileHandle;
+  
+  open($fh,">$output_path/index_packages.html") or die "Couldn't write index_packages.html: $!\n";
+  print $fh <<_LIST_END_;
+<html>
+<head>
+  <title>$title -- Package list</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<link rel="stylesheet" type="text/css" href="style.css">
+<body>
+<nobr>
+<a href="index_allclasses.html" target="classes">All Classes by Package</a><br>
+<a href="index_allnames.html" target="classes">All Classes by Name</a><br>
+</nobr>
+&nbsp;<br>
+<b>Packages</b>
+<div class="classlist"><nobr>
+_LIST_END_
+  my %packages;
+  foreach my $clazz (keys %class_files) {
+    $clazz =~ /^(.*)(::|\.).*?$/;
+    $packages{$1} = 1;
+  }
+  foreach my $pkg (sort keys %packages) {
+    my $file = "index_pkg_".convert_classname($pkg);
+    print $fh "<a href=\"$file\" target=\"classes\">$pkg</a><br>\n";
+    write_package_classes($file,$pkg);
+  }
+  print $fh <<_LIST_BOTTOM_;
+<a href="index_none.html" target="classes">(No Package)</a><br>
+</nobr></div>
+</body>
+</html>
+_LIST_BOTTOM_
+
+  write_package_classes("index_none.html");
+  close($fh);
+}}}
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_package_classes
+#
+# DESCRIPTION:
+#   Generate a HTML file, which contains the names of all classes
+#   that match the package name, in alphabetical order.
+#
+# INPUT
+#   $fname      -- Filename of the package class list
+#   $pkg        -- Package name, "" for all classes without package
+#---------------------------------------------------------------------
+sub write_package_classes {{{
+  my $fh = new FileHandle;
+  my($fname, $pkg) = @_;
+  
+  my $title = $pkg || "(No Package)";
+ 
+  my $qu_pkg = quotemeta $pkg;
+ 
+  open($fh,">$output_path/$fname") or die "Couldn't write $fname: $!\n";
+  print $fh <<_LIST_END_;
+<html>
+<head>
+  <title>$title -- Package $pkg</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<link rel="stylesheet" type="text/css" href="style.css">
+<body>
+<b>$title</b><br>
+&nbsp;<br>
+<div class="classlist"><nobr>
+_LIST_END_
+
+  foreach my $clazz (sort keys %class_files) {
+    if((not defined $pkg) && $clazz !~ /(\:\:|\.)/) {
+      my $file = convert_classname($clazz);
+      print $fh "<a href=\"$file\" target=\"content\">$clazz</a><br>\n";
+    }elsif($clazz =~ /^$qu_pkg(\:\:|\.)(\w+)$/) {
+      my $file = convert_classname($clazz);
+      print $fh "<a href=\"$file\" target=\"content\">$2</a><br>\n";
+    }
+  }
+
+  print $fh <<_LIST_BOTTOM_;
+</nobr></div>
+</body>
+</html>
+_LIST_BOTTOM_
+
+  close($fh);
+}}}
+
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_frame_html
+#
+# DESCRIPTION:
+#   Generate the frame file, which is later loaded into the browser.
+#   It is always called "index.html". Additionally, a blank page is
+#   created, which is loaded into the content frame first.
+#---------------------------------------------------------------------
+sub write_frame_html {{{
+  my $fh = new FileHandle;
+
+  open($fh,">$output_path/index.html") or die "Couldn't write index.html: $!\n";
+  print $fh <<_FRAME_END_;
+<html>
+<head>
+  <title>$title</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<frameset cols="20%,*">
+  <frameset rows="30%,*">
+    <frame src="index_packages.html" name="packages" />
+    <frame src="index_allclasses.html" name="classes" />
+  </frameset>
+  <frame src="index_blank.html" name="content" />
+</frameset>
+<noframes><body>
+  You are strongly suggested to use a frame capable browser. Anyhow
+  click <a href="index_allclasses.html">here</a> to navigate through
+  the documentation with slightly less comfort. <tt>;)</tt>
+</body></noframes>
+</html>
+_FRAME_END_
+  close($fh);
+
+  open($fh,">$output_path/index_blank.html") or die "Couldn't write index_blank.html: $!\n";
+  print $fh <<_BLANK_END_;
+<html>
+<head>
+  <title>$title</title>
+  <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1">
+</head>
+<link rel="stylesheet" type="text/css" href="style.css">
+<body>
+  Select a class on the left frame to see its documentation.
+</body>
+</html>
+_BLANK_END_
+  close($fh);
+}}}
+
+##--------------------------------------------------------------------
+# METHOD:
+#   write_style
+#
+# DESCRIPTION:
+#   Generate the stylesheet file. If it does already exist, it will
+#   not be touched.
+#---------------------------------------------------------------------
+sub write_style {{{
+  return if !$force_rewrite and -e "$output_path/style.css";
+
+  print "Writing style sheets\n" if $verbose;
+
+  my $fh = new FileHandle;
+  open($fh,">$output_path/style.css") or die "Couldn't write style.css: $!\n";
+  print $fh <<_STYLE_END_;
+/* OOPerlDoc $ver Style Sheet */
+body { background-color:#FFFFFF; color: #000000 }
+:link { color: #C08000; text-decoration: none }
+:visited { color: #804000; text-decoration: none }
+:hover { background-color: #FFFFE0 }
+
+/* All generated monospaced text */
+code { font-family: monospace }
+
+/* Style for the preformatted class tree */
+pre.tree { font-family: monospace }
+
+/* How the keyword 'undef' is rendered */
+.undef { font-family: monospace }
+
+/* Navigation bar at the top */
+.navigation { font-size: smaller }
+
+/* Headers, footers etc. */
+.headline { font-size: 20pt; font-weight: bold; text-align: center; }
+.header { background-color: #FFB800; font-size: 16pt; font-weight: bold }
+.subheader { background-color: #FFB800; font-weight: bold }
+.subheaderlink { font-family: monospace; color: #000000 }
+.method { font-size: large; font-weight: bold }
+.smaller { font-size: smaller }
+.footer { font-size: smaller }
+
+/* Definition of the class name */
+.classdef { font-family: monospace }
+
+/* Class list */
+.classlist { font-family: monospace; font-size: 10pt }
+
+/* Background colors for the method table */
+.public { background-color: #A0E0A0 }
+.protected { background-color: #E0E0A0 }
+.private { background-color: #E0A0A0 }
+
+/* Source code colors */
+.srcCmt { color: #008000 }
+.srcHtmlTag { color: #000080; font-weight: bold }
+.srcOOPDKwd { font-weight: bold }
+.srcPerlKwd { font-weight: bold }
+
+_STYLE_END_
+  close($fh);
+}}}
+
+#--EOF--

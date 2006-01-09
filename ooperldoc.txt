@@ -1,0 +1,1611 @@
+
+
+    ###   ###  ####              # ####
+   #   # #   # #   #  ###  # ### # #   #  ###   ####
+   #   # #   # ####  #   # ##    # #   # #   # #   #
+   #   # #   # #     # ##  #     # #  #  #   # #   
+    ###   ###  #      #### #     # ###    ###   ####
+
+    
+http://www.shredzone.net/go/ooperldoc
+    
+
+
+1. OOPerlDoc
+-----------------------------------------------------
+  OOPerlDoc is a tool that has been designed to create a good-looking
+  HTML documentation out of Perl programs. It was focussed on object
+  oriented Perl programming, but it is usable for procedural Perl
+  modules as well.
+
+  The resulting HTML document consists of several HTML files which are
+  linked to each other. You can see them with every HTML 3.2 compliant
+  web browser that supports frames.
+
+
+1.1. Invocation
+-----------------------------------------------------
+  OOPerlDoc is invoked from the shell, like this:
+
+    ooperldoc [options] [dir1 [dir2 [..]]]
+
+  Options are:
+
+    -h          --help            Show short help summary, and exit.
+
+    -D [dir]    --dir [dir]       Select the output directory where the
+                                  HTML files are put into. The current
+                                  directory will be used if this
+                                  parameter is omitted.
+
+    -s          --source          Add sourcecode to documentation. The
+                                  source files will be syntax highlighted
+                                  (in a simple way), put into a "src"
+                                  directory within the output directory,
+                                  and referenced by the class and method
+                                  documentation. This will take some more
+                                  time, and blow up the documentation a
+                                  big deal. Some people also do not want
+                                  to make their source public. Thus, this
+                                  option is turned off by default.
+    
+    -v          --verbose         Verbose output of what OOPerlDoc is
+                                  currently doing.
+
+    -O          --overwrite       Force OOPerlDoc to overwrite its
+                                  stylesheet file style.css. By default,
+                                  the stylesheet file is kept when it is
+                                  found, in case it was customized.
+                                  
+    -p          --private         The documentation will also contain
+                                  all methods which were declared as
+                                  "private". If omitted, private methods
+                                  will be ignored.
+
+    -t [title]  --title [title]   The document's title as it will be
+                                  shown in the browser's title bar.
+
+                --temp            Convert temporary files as well. This
+                                  are all files having a period '.' as
+                                  the first file name letter, or a tilde
+                                  '~' as its last letter. If omitted,
+                                  temporary files and directories will
+                                  be ignored.
+
+  After the options, a list of one or more directories is following.
+  These directories are scanned recursively (temporary files will be
+  ignored, see '--temp' option above), and every readable file is parsed
+  for OOPerlDoc comments.
+
+  If the list of directories is omitted, all files starting from the
+  current directory, will be scanned.
+
+  OOPerlDoc parses every readable file in the given directory tree(s).
+  After that, it generates a documentation file for each valid class
+  file it has found.
+
+
+2. Rules for valid OOPerlDoc comments
+-----------------------------------------------------
+
+  OOPerlDoc is only parsing through a file for special comment blocks.
+  Lines of Perl code will be ignored. Thus, OOPerlDoc is also suited for
+  uncomplete programs, as well as for other programming languages which
+  are using Perl style comments (as e.g. shell scripts). It is not
+  limited to compileable Perl code.
+
+  The source code is divided into one or more comment blocks, which are
+  again divided into one or more sections.
+
+
+2.1. Comment blocks
+-----------------------------------------------------
+
+  A comment block always starts with a double hash '##'. After that,
+  only zero or more whitespaces, dashes '-' and equal signs '=' are
+  allowed.
+
+  The block extends over all subsequent lines which are starting with a
+  single hash '#'. A block ends if no hash '#' is found in a line, or if
+  there were leadinging non-whitespace characters.
+
+  There must be at least one non-commented line (e.g. an empty line)
+  between two comment blocks for now. This may change in a future
+  release.
+
+  You may indent the comment blocks with spaces and tabs.
+
+  To improve the look of a comment, you can always add comment lines
+  which entirely consist of whitespace, dashes '-' and equal signs '='
+  after the hash '#'. Those lines will be ignored by OOPerlDoc.
+
+  Examples will follow below.
+
+
+2.2. Sections
+-----------------------------------------------------
+
+  A comment block is divided into one or more sections.
+
+  A section is started by a certain section name. All subsequent lines
+  then refer to this section, until the comment block ends, or a new
+  section is opened.
+
+  A section name is always written in capital letters only. After that,
+  a colon may follow. The rest of the line must only contain
+  whitespaces.
+
+  Sections may be interrupted by other sections, and resumed later
+  within the same comment block, by using the section name again. Anyhow
+  we strongly discourage you to use this.
+
+
+2.3. Content of a section
+-----------------------------------------------------
+
+  After a section name, the content of the section is following.
+
+  The formatting of the content depends on the section name.
+
+  In some sections, it is allowed (and you are encouraged) to use HTML
+  markup. Anyhow you should limit yourself to very simple HTML 3.2,
+  without browser dependent code.
+
+  <img> tags are only allowed if the image source is an absolute URL
+  referring to a server. It should be rarely used though.
+
+  OOPerlDoc will remove all whitespaces following a hash '#'. This can
+  lead to problems in preformatted environments, as <pre> containers.
+  So, to avoid whitespace stripping, you can put a dash '|' at the
+  position where whitespaces should be taken to the final documentation.
+  All whitespace before the dash, and the dash itself, will be stripped.
+
+  Example:
+
+  # EXAMPLE:
+  #     <pre>
+  #       if(a == b) {
+  #         print "A gleich B\n";
+  #         a = 0;
+  #       }
+  #     </pre>
+
+  will result in
+
+  if(a == b) {
+  print "A gleich B\n";
+  a = 0;
+  }
+
+  in the documentation, because all whitespace were stripped. Now use
+  dashes like this:
+
+  # EXAMPLE:
+  #     <pre>
+  #     |  if(a == b) {
+  #     |    print "A gleich B\n";
+  #     |    a = 0;
+  #     |  }
+  #     </pre>
+
+  to get the result you have expected:c
+
+    if(a == b) {
+      print "A gleich B\n";
+      a = 0;
+    }
+
+  IMPORTANT: since HTML markup is used, remember to replace all smaller
+  signs '<' and ampersand '&' in your program code by the appropriate
+  HTML entities.
+
+  OOPerlDoc cares about some formatting for you.
+
+  First, the keyword "undef" will automatically placed within a <code>
+  container and is rendered in a fixed width font in the documentation.
+
+  Hyperlinks starting with "http", "https" and "ftp", are converted into
+  real links.
+
+  Finally, if you use a class name that is known to OOPerlDoc (because
+  that class will be converted within the same OOPerlDoc invocation), it
+  will automatically place a link onto this class.
+
+
+3. Comment types
+-----------------------------------------------------
+
+  The Perl source contains several comment types.
+
+
+3.1. Class comments
+-----------------------------------------------------
+
+  This comment type describes the entire class file itself. It must be
+  present in order to let OOPerlDoc convert this class. It is strongly
+  suggested to place this comment at the topmost position of the file.
+
+  These sections can be used in a class comment (a detailed description
+  will follow below):
+
+    CLASS           The name of the class. Required!
+
+    NAME            Used instead of CLASS, but for procedural modules.
+
+    EXTENDS         List of super classes this class is derived from.
+                    Note that even though you can list more than one
+                    superclass here, OOPerlDoc does not support multiple
+                    inheritance yet.
+
+    PURPOSE         The purpose of this class. Required!
+    
+    NOTE            Important note about this class. This note will be
+                    shown separately, with a "Note:" written before,
+                    so it will easily be seen.
+
+    REQUIRES        Other modules, classes and programs this class
+                    depends on.
+
+    DEPRECATED      If the class has been deprecated, use this section.
+                    State the reason of deprecation and show a possible
+                    replacement here.
+
+    AUTHOR          Author(s) of this class.
+
+    VERSION         Version and date.
+
+    CVS             Reserved for CVS version ID.
+
+    HISTORY         Change history of this class.
+
+    SEE             Cross references to other classes and further
+                    information about the topic.
+
+    COPYRIGHT       Copyright note.
+
+    SINCE           Version of the software where this class has been
+                    introduced. This is important for backward
+                    compatibility.
+
+  This is an example of a valid class comment:
+
+    ##------------------------------------------------------
+    # CLASS:
+    #   static: Examples::CL_Example
+    # EXTENDS:
+    #   Examples::CL_Super
+    #
+    # PURPOSE:
+    #   This class is just an <b>example</b>.
+    #
+    # NOTE:
+    #   This class is not yet completed, so use it with care.
+    #
+    # REQUIRES:
+    #   data::dumper
+    #
+    # AUTHOR:
+    #   Richard Körber <dev@shredzone.de>
+    #
+    # VERSION:
+    #   V1.0 (2000-08-22)
+    #-------------------------------------------------------
+    # HISTORY:
+    #	  V1.0 (2000-08-22) rkoerber
+    #     - First release of this class
+    #-------------------------------------------------------
+
+
+
+3.1.1. CLASS
+-----------------------------------------------------
+
+  SECTION:    CLASS
+
+  CONTEXT:    class comment (REQUIRED SECTION)
+
+  PURPOSE:
+    This section introduces a class comment, by describing the class
+    name. If the Perl module is not a class, but a procedural module,
+    you should use NAME instead of class (see 3.1.2).
+
+  CONTENT:
+    The section only contains the class name, which is optionally
+    preceeded by modifiers. The list of modifiers is separated by
+    space and terminated by a colon.
+
+      [modifier [' ' modifier ...] ': '] class_name
+
+    If no modifieres are given, you may leave out the colon.
+
+    You are not allowed to add further text.
+
+    These modifiers are allowed:
+
+      static        Static class, cannot be instantiated.
+
+      abstract      This class contains at least one abstract method.
+                    Only its derivates can be instantiated.
+
+      final         This class is finished and must not be derivated.
+
+      deprecated    This class is entirely obsoleted. It may be removed
+                    in future releases, and must not be used in new
+                    code.
+
+  EXAMPLE:
+
+    :
+    # CLASS
+    #     Package::FooClass
+    :
+
+    :
+    # CLASS
+    #     static final: Package::FinalClass
+    :
+
+
+
+3.1.2. NAME
+-----------------------------------------------------
+
+  SECTION:    NAME
+
+  CONTEXT:    class comment (REQUIRED SECTION)
+
+  PURPOSE:
+    If this module describes a procedural program rather than an OOP
+    class, you should use "NAME" instead of "CLASS" (see 3.1.1.).
+
+  CONTENT:
+    See 3.1.1. "CLASS".
+
+    Only the "deprecated" modifier may be used here. Other modifiers are
+    for OOP purposes only, and not of relevance in procedural
+    programming.
+
+    If you use "NAME" instead of "CLASS", you should also use "FUNCTION"
+    instead of "METHOD".
+
+  EXAMPLE:
+
+    :
+    # NAME
+    #     Package::FooModule
+    :
+
+    :
+    # NAME
+    #     deprecated: Package::DeprecatedModule
+    :
+
+
+
+3.1.3. EXTENDS
+-----------------------------------------------------
+
+  SECTION:    EXTENDS
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    Used in a class comment, to list all super classes this class is
+    derived from. If this section is omitted, the class will implicitly
+    be derived from UNIVERSAL.
+
+  CONTENT:
+    A list of the names of all super classes. The names are separated by
+    comma or line breaks. Other text and HTML markup is not allowed.
+
+    OOPerlDoc does not support multiple inheritance yet. Thus, if you
+    give a list of names, only the first name will be used for
+    generating a class tree. The following names are just listed in the
+    class description.
+
+  NOTE:
+    This section is required because OOPerlDoc will not evaluate the
+    @ISA list.
+
+  EXAMPLE:
+
+    :
+    # EXTENDS:
+    #     MyClass::MySuperClass
+    :
+
+    :
+    # EXTENDS:
+    #     MyClass::MySuperClass, MyClass::SecondClass
+    #     HelpPackage::UniversalHelp
+    :
+
+
+
+3.1.4. PURPOSE
+-----------------------------------------------------
+
+  SECTION:    PURPOSE
+
+  CONTEXT:    class comment (REQUIRED SECTION)
+
+  PURPOSE:
+    Describe the purpose of the class or module.
+
+  CONTENT:
+    A plain text of your choice. The first sentence should always
+    describe a short summary of the purpose of this class. The next
+    sentences will then describe more details.
+
+    You are allowed (and encouraged) to use HTML markup here.
+
+  EXAMPLE:
+
+    :
+    # PURPOSE:
+    #     A demonstration class. This text demonstrates how
+    #     to use the <code>PURPOSE</code> section in a class
+    #     comment.
+    :
+
+
+
+3.1.5. NOTE
+-----------------------------------------------------
+
+  SECTION:    NOTE
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    Important note about this class. Optional. The purpose is to
+    the user very important information about how to use this class
+    and avoid bugs.
+
+  CONTENT:
+    This is plain text. HTML markup is allowed. Known class names will
+    be linked to the appropriate documentation automatically.
+
+  EXAMPLE:
+
+    :
+    # NOTE:
+    #   This class is often mixed up with ExampleClass2.
+    :
+
+
+
+3.1.6. REQUIRES
+-----------------------------------------------------
+
+  SECTION:    REQUIRES
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    A list of things this class requires to run properly. This can be
+    other classes, installed Perl packages, third party software etc.
+
+  CONTENT:
+    There is no special format defined for this section. You may use
+    HTML markup. Known class names will be linked automatically.
+
+  EXAMPLE:
+
+    :
+    # REQUIRES:
+    #     <a href="http://www.imagemagick.org">ImageMagick</a>
+    :
+
+
+3.1.7. DEPRECATED
+-----------------------------------------------------
+
+  SECTION:    DEPRECATED
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    Contains further details about the deprecation.
+
+  CONTENT:
+    If you have marked a class as deprecated (by the deprecated
+    modifier, see 3.1.1. and 3.1.2.), you are encouraged to write in
+    this section:
+
+      * Why has the class been deprecated?
+      * How can the functionality be replaced? (i.e. is there a new
+        class that replaces this class?)
+
+  EXAMPLE:
+
+    :
+    # DEPRECATED:
+    #     This class has been replaced by ReplacerClass. Do not
+    #     use this class in new code.
+    :
+
+
+
+3.1.8. VERSION
+-----------------------------------------------------
+
+  SECTION:    VERSION
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    Describes the current version and release date of this class.
+
+  CONTENT:
+    The syntax is:
+
+      ('V'|'v') nr ['.' nr [...]] ['(' year '-' month '-' day ')']
+
+    This section starts with either a capital or small 'V', followed by
+    a version number (with subversions divided by a period). Optionally,
+    a date may follow within brackets. The format is YYYY-MM-DD.
+
+  EXAMPLE:
+
+    :
+    # VERSION:
+    #     V3.0.2 (2000-08-24)
+    :
+
+
+3.1.9. CVS
+-----------------------------------------------------
+
+  SECTION:    CVS
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    This section contains the version number that is maintained by CVS.
+
+  CONTENT:
+    The initial content is just 'Id' enclosed in dollar signs. It will
+    be updated by CVS automatically, everytime the content is committed
+    to the repository.
+
+  NOTE:
+    It is a capital 'I' and a small 'd', surrounded by dollar signs.
+
+
+
+3.1.10. HISTORY
+-----------------------------------------------------
+
+  SECTION:    HISTORY
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    History of changes made to this class.
+
+  CONTENT:
+    The content is not defined by OOPerlDoc. You may use HTML markup.
+    Known class names will be linked.
+
+
+
+3.1.11. SEE
+-----------------------------------------------------
+
+  SECTION:    SEE
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    Cross reference to other classes and further information about the
+    topic.
+
+  CONTENT:
+    A link to everything that is related to this class, as other
+    classes, software, literature, etc.
+
+    You may use HTML markup here. Known class names will be linked.
+
+  EXAMPLE:
+
+    :
+    # SEE:
+    #     Package::OtherClass, <a href="http://www.w3.org">W3</a>
+    :
+
+
+
+3.1.12. COPYRIGHT
+-----------------------------------------------------
+
+  SECTION:    COPYRIGHT
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    Copyright info to this class.
+
+  CONTENT:
+    No special format. HTML markup is allowed.
+
+  EXAMPLE:
+
+    :
+    # COPYRIGHT:
+    #   Copyright (C) 2001 dimedis GmbH, Cologne, Germany
+    :
+
+
+
+3.1.13. SINCE
+-----------------------------------------------------
+
+  SECTION:    SINCE
+
+  CONTEXT:    class comment
+
+  PURPOSE:
+    Version of this software, when this class has been introduced.
+
+  CONTENT:
+    Describes the version of the entire software package where this
+    class has been introduced. A programmer will know that this version
+    of the software package is required if he uses this class.
+
+    The format is equal to VERSION (3.1.7.), see there.
+
+  EXAMPLE:
+
+    :
+    # SINCE:
+    #     V2.1.3 (2000-04-12)
+    :
+
+
+
+3.2. Attributes comment
+-----------------------------------------------------
+
+  This comment type lists all class attributes which are available.
+
+  Perl does not know about class attributes like other OOP related
+  programming languages. Instead, there usually is a hash variable that
+  is blessed to the package name.
+
+  The attribute comment block contains a table of all hash keys of that
+  hash, and their meaning.
+
+  In the documentation, the attribute comment will be shown below the
+  class outline.
+
+  This is an example of a valid attribute comment:
+
+    ##------------------------------------------------------
+    # ATTRIBUTES:
+    #   public: type              => object type
+    #   private: name             => some name
+    #   public readonly: shape    => some shape instance
+    #-------------------------------------------------------
+
+
+3.2.1. ATTRIBUTES
+-----------------------------------------------------
+
+  SECTION:    ATTRIBUTES
+
+  CONTEXT:    attribute comment (REQUIRED SECTION)
+
+  PURPOSE:
+    List of all class attributes.
+
+  CONTENT:
+    The content consists of key-value-pairs.
+
+    The key is a valid identifier name (only letters, numbers and
+    underscore is allowed), which may be prefixed by modifiers. The
+    modifiers are separated by a colon.
+
+    After the key, the hash operator '=>' must follow. After that, the
+    description follows. The description may extend to the next lines.
+    It is stopped as soon as a new valid key is recognized.
+
+    Syntax:
+
+      [modifier [modifier ...] ':'] name '=>' description
+
+    These modifiers are allowed:
+
+      public      Attribute is public (i.e. accessible by all classes)
+      protected   Attribute is protected (i.e. accessible only by the
+                  class itself, and its subclasses)
+      private     Attribute is private (i.e. accessible only to the
+                  class itself)
+
+      readonly    The attribute is read only. Only the owner instance
+                  itself is allowed to change it.
+
+      restricted  The attribute access is restricted. The owner class,
+                  and its subclasses, are allowed to change it. All
+                  other classes only have read access.
+
+      final       A constant value. The attribute is set at construction
+                  time, and then will not change any more. Even the
+                  owner class is not allowed to change the value.
+
+      deprecated  This attribute is deprecated. It may be removed in
+                  future releases. Do not use in new code.
+
+    The description may use HTML markup. Known class names will be
+    linked automatically.
+
+
+
+3.3. General comment
+-----------------------------------------------------
+
+  A general comment can be used for all kind of purposes.
+
+  The comment block output is arranged below the attribute comment
+  output. You can have several general comments, which are put below
+  each other in the sequence they are found.
+
+  A general comment always consists of a title, which will be put to the
+  top of the table.
+
+  Additionally, you can put plain text, a key-value table, or both.
+
+  The plain text content is put into a COMMENT section. The key-value
+  table is put into a HASHMAP section.
+
+  If you use both, the plain text is always shown above the key-value
+  table. This may change in a future release of OOPerlDoc, so you
+  shouldn't rely on that. You are encouraged to always use the COMMENT
+  section first, and the HASHMAP section after that. Never use more than
+  one of these sections in each general comment, for now.
+
+  Example:
+
+    ##------------------------------------------------------
+    # EXTRA
+    #   Keys
+    #
+    # COMMENT
+    #   List of all keys that can be passed to the
+    #   <code>get_key</code> method.
+    #
+    # HASHMAP
+    #   name        => First and family name
+    #   street      => Street and number
+    #   town        => ZIP and town
+    #-------------------------------------------------------
+
+
+
+
+
+3.3.1. EXTRA
+-----------------------------------------------------
+
+  SECTION:    EXTRA
+
+  CONTEXT:    general comment (REQUIRED SECTION)
+
+  PURPOSE:
+    Title of a general comment.
+
+  CONTENT:
+    This section starts a new general comment. The content is used as
+    the title of the comment table.
+
+    The title must be present, but quite short (only a few words), and
+    must not use HTML markup.
+
+
+3.3.2. COMMENT
+-----------------------------------------------------
+
+  SECTION:    COMMENT
+
+  CONTEXT:    general comment
+
+  PURPOSE:
+    Contains a general, plain comment.
+
+  CONTENT:
+    This comment is just plain text which may be decorated by HTML
+    markup. Links to known classes will be created automatically.
+
+
+
+3.3.3. HASHMAP
+-----------------------------------------------------
+
+  SECTION:    HASHMAP
+
+  CONTEXT:    general comment
+
+  PURPOSE:
+    A map of key-value-pairs. A table with two columns will be generated
+    for that.
+
+  CONTENT:
+    The content consists of key-value-pairs.
+
+    The key is a free text, but it must not contain HTML markup.
+
+    In the same line of the key, the hash operator '=>' must follow.
+
+    After that, the description follows. The description may extend to
+    the next lines. It is stopped as soon as a new line with the hash
+    operator '=>', or the end of the comment block, was found.
+
+    The description may contain HTML markup. Known class names will be
+    linked automatically.
+
+
+
+3.4. Method comments
+-----------------------------------------------------
+
+  This comment block is to be put before each method. It describes the
+  purpose, and the input and return values, of this method.
+
+  Since OOPerlDoc ignores the program code itself, it is not required
+  that the method comment is placed before the 'sub' definition of the
+  method (anyhow we encourage you to do so). Besides that, you can also
+  create method comments without methods, e.g. to define abstract
+  methods.
+
+  These sections can be used within a method comment (a detailed
+  description will follow below):
+
+    METHOD          The name of the method. Required!
+
+    FUNCTION        If the Perl package is not object oriented, but a
+                    procedural module, you should use FUNCTION instead
+                    of METHOD. Required!
+
+    DESCRIPTION     Description about the functionality of the method.
+                    Required!
+
+    NOTE            Important note about this method. This note will be
+                    shown separately, with a "Note:" written before,
+                    so it will easily be seen. (Optional)
+
+    INPUT           A list of all mandatory input parameters.
+
+    OPTIONAL        A list of all optional input parameters.
+
+    RETURN          A list of all return values.
+
+    THROWS          A list of all exceptions this method generates.
+
+    AUTHOR          Author(s) of this method, if different from the
+                    AUTHOR section of the class comment.
+
+    VERSION         Version of this method.
+
+    DEPRECATED      If the method is deprecated, you can explain the
+                    reasons here, and how the programmer can replace the
+                    functionality.
+
+    SEE             Cross references to other methods, classes and
+                    further information about the topic.
+
+    SINCE           Version of the software where this method has been
+                    introduced. This is important for backward
+                    compatibility.
+
+  This is an example of the valid method comment.
+
+    ##------------------------------------------------------
+    # METHOD:
+    #   public: get_names
+    #
+    # DESCRIPTION:
+    #   Get a list of all names. If no name does exist,
+    #   undef will be returned.
+    #
+    # NOTE:
+    #   Due to a bug, previous versions returned 0 instead
+    #   of undef.
+    #
+    # INPUT:
+    #   $id        -- Name list ID to be fetched
+    #
+    # RETURN:
+    #   List of all names, or undef
+    #-------------------------------------------------------
+
+
+
+3.4.1. METHOD
+-----------------------------------------------------
+
+  SECTION:    METHOD
+
+  CONTEXT:    method comment (REQUIRED SECTION)
+
+  PURPOSE:
+    This section introduces a method comment, by describing the method
+    name. If the Perl module is not a class, but a procedural module,
+    you should use FUNCTION instead of METHOD (see 3.4.2).
+
+  CONTENT:
+    The section only contains the method name, which is optionally
+    preceeded by modifiers. The list of modifiers is separated by
+    space and terminated by a colon.
+
+      [modifier [' ' modifier ...] ': '] method_name
+
+    If no modifiers are given, you may leave out the colon. The method
+    is then regarded as public.
+
+    You are not allowed to add further text.
+
+    These modifiers are allowed:
+
+      public        Public method. All classes can invoke it.
+
+      protected     Protected method. Only the superclass and all
+                    derivated classes are allowed to invoke it.
+
+      private       Private method. Only the class it self is allowed to
+                    invoke it. Private methods are not documented by
+                    OOPerlDoc unless required. By convention, private
+                    method names always start with an underscore.
+
+      constructor   A constructor of this class. Usually named as 'new'.
+
+      destructor    The destructor of this class. Perl only allows one
+                    destructor, which must have the name 'DESTROY'.
+
+      static        Class method. No instance is needed to invoke this
+                    method.
+
+      hybrid        Class and instance method. This method does not care
+                    if invoked as class method, or instance method. This
+                    is a Perl speciality. Implies 'static'.
+
+      abstract      This method is not implemented in this class, but
+                    must be implemented at one of its derivates. If at
+                    least one method is declared as abstract, you must
+                    declare the whole class as abstract (see CLASS,
+                    3.1.1.).
+
+      final         This method must not be replaced in a subclass.
+
+      deprecated    The method is deprecated, and may be removed in
+                    future releases of this class. Do not use it in new
+                    programs.
+
+  EXAMPLE:
+
+    :
+    # METHOD
+    #     get_name
+    :
+
+    :
+    # METHOD
+    #     public static: get_name_by_id
+    :
+
+    :
+    # METHOD
+    #     private: _convert_id
+    :
+
+
+3.4.2. FUNCTION
+-----------------------------------------------------
+
+  SECTION:    FUNCTION
+
+  CONTEXT:    method comment (REQUIRED SECTION)
+
+  PURPOSE:
+    Contains the name of the function. If the module is written in a
+    procedural fashion instead of OOP, use FUNCTION instead of METHOD.
+
+  CONTENT:
+    Only the name of the function is allowed here. No modifiers, or
+    other additions. In an OOP context, FUNCTIONs are always regarded as
+    "public static final" (see 3.4.1.).
+
+  EXAMPLE:
+
+    :
+    # FUNCTION
+    #   set_command_id
+    :
+
+
+
+3.4.3. DESCRIPTION
+-----------------------------------------------------
+
+  SECTION:    DESCRIPTION
+
+  CONTEXT:    method comment (REQUIRED SECTION)
+
+  PURPOSE:
+    Describes the purpose of this method or function.
+
+    The first sentence will also be used in the method summary at the
+    top of the documentation. This sentence should be quite short and
+    self-explaining.
+
+  CONTENT:
+    This is plain text. HTML markup is allowed. Known class names will
+    be linked to the appropriate documentation automatically.
+
+  NOTE:
+    OOPerlDoc regards the end of the first sentence at the first period
+    it finds, or at the end of the only sentence. Thus, try to avoid
+    periods in the first sentence which could be mixed up.
+
+    Example: For the description "Calculates pi as 3.141592", OOPerlDoc
+    would extract "Calculates as to 3." as the first sentence.
+
+  EXAMPLE:
+
+    :
+    # DESCRIPTION
+    #   Get a list of all members. The member list is sorted
+    #   alphabetically by the member name. If the list is empty,
+    #   undef is returned instead.
+    :
+
+
+3.4.4. NOTE
+-----------------------------------------------------
+
+  SECTION:    NOTE
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    Important note about this method or function. Optional. The
+    purpose is to give the user very important information about
+    how to use this method and to avoid bugs.
+
+  CONTENT:
+    This is plain text. HTML markup is allowed. Known class names will
+    be linked to the appropriate documentation automatically.
+
+  EXAMPLE:
+
+    :
+    # NOTE
+    #   This method may also return undef, which may be a little
+    #   unexpected in some situations. Always check for it!
+    :
+
+
+3.4.5. INPUT
+-----------------------------------------------------
+
+  SECTION:    INPUT
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    List of all required input parameters passed to this method.
+    Optional input parameters are listed in the OPTIONAL section (see
+    3.4.5.). If there are no required parameters for this method, you
+    can skip this section.
+    
+  CONTENT:
+    This section optionally starts with a plain text. This text may use
+    HTML markup. Known class names will be linked to the appropriate
+    documentation automatically.
+
+    After the optional plain text, several variable descriptions or
+    key-value-pairs may follow.
+    
+    A variable description starts with the variable name in a new line,
+    followed by a space (!) and two minus signs ' --', followed by the
+    description of that variable. The description may contain HTML
+    markup and may extend by several lines. It is stopped as soon as a
+    new variable name and the two minus signs are recognized in a line.
+    
+    The variable name must follow certain syntax rules, to be recognized
+    properly. It may start with a backslash '\' (which means reference),
+    followed by a symbol that describes the variable type (one of '$',
+    '@', '%', '&' and '*'), followed by the variable name itself.
+    
+    If you pass a hash list to the method, you can also use
+    key-value pairs. Here, you start with the key name, followed by the
+    hash operator '=>', followed by the description. The description may
+    contain HTML markup.
+  
+  EXAMPLE:
+  
+    :
+    # INPUT:
+    #   \@hash_hr         -- Hash reference that contains further
+    #                        details for the process.
+    #   $name             -- Some name
+    :
+  
+    :
+    # INPUT:
+    #   Some values in loose order
+    :
+  
+    :
+    # INPUT:
+    #   This method expects these parameters:
+    #     \@hash_hr       -- Hash reference that contains further
+    #                        details for the process.
+    #     $name           -- Some name
+    :
+  
+    :
+    # INPUT:
+    #   This method expects a hash with these parameters, in
+    #   loose order:
+    #     hash_hr         => Hash reference that contains further
+    #                        details for the process.
+    #     name            => Some name
+    :
+  
+ 
+3.4.6. OPTIONAL
+-----------------------------------------------------
+
+  SECTION:    OPTIONAL
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    List of all optional input parameters passed to this method.
+    Mandatory input parameters are listed in the INPUT section (see
+    3.4.4.). If there are no optional parameters for this method, you
+    can skip this section.
+    
+  CONTENT:
+    See INPUT (3.4.4.).
+    
+  EXAMPLE:
+
+    :
+    # OPTIONAL:
+    #   You may also pass these parameters, in loose order:
+    #     hash_hr         => Hash reference that contains further
+    #                        details for the process.
+    #     name            => Some name
+    :
+
+    
+    
+3.4.7. RETURN
+-----------------------------------------------------
+
+  SECTION:    RETURN
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    List of all values returned from this method. Usually, this will
+    only be one value, but since Perl can also return lists and hashes,
+    you can also list more than one value here.
+    
+  CONTENT:
+    See INPUT (3.4.4.).
+    
+  EXAMPLE:
+
+    :
+    # RETURN:
+    #   List of all names, or undef.
+    :
+
+    :
+    # RETURN:
+    #   Returns a hash, with these keys:
+    #     name          => User name
+    #     street        => User address
+    #     phone         => User phone number
+    :
+
+
+3.4.8. THROWS
+-----------------------------------------------------
+
+  SECTION:    THROWS
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    Documents all exceptions this method can throw.
+  
+  CONTENT:
+    First, the verbatim exception text is written (in quotation marks,
+    optionally), followed by a space (!) and two minus signs ' --',
+    followed by a detailed description of this exception.
+    
+    You must not use HTML markup in the exception text. But you may
+    prefix replacers with a dollar sign (e.g. "user $username is 
+    unknown").
+  
+    The description may use HTML markup and may also extend over several
+    lines. The description is finished when a new exception text is
+    recognized (by the ' --') or when the section is finished.
+
+  NOTE:
+    The THROWS section only contains exceptions this method will throw.
+    This list is incomplete, because the method may call other methods
+    which in turn may throw other exceptions.
+  
+  EXAMPLE:
+  
+    :
+    # THROWS:
+    #     "Unknown user $name"    -- User is not known, thus
+    #             you are not allowed to access the system.
+    #     "User access expired"   -- User does exist, but his
+    #             account has expired.
+    :
+  
+  
+3.4.9. AUTHOR
+-----------------------------------------------------
+
+  SECTION:    AUTHOR
+
+  CONTEXT:    method comment
+
+  SEE:        class comment's AUTHOR section: 3.1.????
+
+
+3.4.10. VERSION
+-----------------------------------------------------
+
+  SECTION:    VERSION
+
+  CONTEXT:    method comment
+
+  SEE:        class comment's VERSION section: 3.1.????
+
+  
+  
+3.4.11. DEPRECATED
+-----------------------------------------------------
+
+  SECTION:    DEPRECATED
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    Contains further details about the deprecation.
+
+  CONTENT:
+    If you have marked a method as deprecated (by the deprecated
+    modifier, see 3.4.1.), you are encouraged to write in this section:
+
+      * Since which version has this method been deprecated?
+      * Why has the method been deprecated?
+      * How can the functionality be replaced? (i.e. is there a new
+        method that replaces this method?)
+
+  EXAMPLE:
+
+    :
+    # DEPRECATED:
+    #     This method has been deprecated because of several
+    #     cleanups we have done to this class. You can now use
+    #     <code>get_info</code> instead, and pass INFO_NAME
+    #     there to get the information you got before.
+    #     <p>
+    #     This method will be removed in a future version of
+    #     the class. Do not use it in new code.
+    :
+
+    
+3.4.12. SEE
+-----------------------------------------------------
+
+  SECTION:    SEE
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    Cross reference to other methods and further information about the
+    topic.
+
+  CONTENT:
+    A link to everything that is related to this method, as other
+    methods, classes, literature, etc.
+
+    You may use HTML markup here. Known class names will be linked.
+
+  EXAMPLE:
+
+    :
+    # SEE:
+    #     get_as_png,
+    #     <a href="http://www.libpng.org/pub/png/">PNG specs</a>
+    :
+
+    
+    
+
+3.4.13. SINCE
+-----------------------------------------------------
+
+  SECTION:    SINCE
+
+  CONTEXT:    method comment
+
+  PURPOSE:
+    Version of this class or software, when this method has been
+    introduced.
+
+  CONTENT:
+    Describes the version of the class or entire software package where
+    this class has been introduced. A programmer will know that this
+    version is required to invoke this method.
+
+    The format is equal to VERSION (3.1.7.), see there.
+
+  EXAMPLE:
+
+    :
+    # SINCE:
+    #     V2.1.3 (2000-04-12)
+    :
+
+
+    
+3.5. CIPP object comments
+-----------------------------------------------------
+
+  This new comment type has been introduced with OOPerlDoc V1.20.
+
+  It is used to comment CIPP objects. CIPP is a web development add-on
+  for Perl, comparable to JSP or PHP.
+  
+  A CIPP object block is a combination of a Class comment and a Method
+  comment. While it is used like a Class comment, it also allows a list
+  of INPUT, OPTIONAL and RETURN parameters. OOPerlDoc will generate a
+  virtual Method comment for those parameters, with the Method name
+  taken from the Class name.
+  
+  Note that you must use this block instead of and like a Class comment
+  block (see 3.1). This means that you must not use this block more than
+  once per file, and if you are using it, you must not use a Class
+  comment block.
+
+  These sections can be used within a CIPP object comment:
+
+    CIPPOBJECT      The name of the CIPP object. Required!
+
+    PURPOSE         A description of the CIPP object. This will also be
+                    used as the description of the virtual method block.
+    
+    NOTE            Important note about this object. This note will be
+                    shown separately, with a "Note:" written before,
+                    so it will easily be seen. (Optional)
+
+    INPUT           A list of all mandatory input parameters.
+
+    OPTIONAL        A list of all optional input parameters.
+
+    RETURN          A list of all return values.
+
+    THROWS          A list of all exceptions this method generates.
+
+    REQUIRES        Other modules, classes and programs this class
+                    depends on.
+
+    DEPRECATED      If the class has been deprecated, use this section.
+                    State the reason of deprecation and show a possible
+                    replacement here.
+
+    AUTHOR          Author(s) of this class.
+
+    VERSION         Version and date.
+
+    CVS             Reserved for CVS version ID.
+
+    HISTORY         Change history of this class.
+
+    SEE             Cross references to other classes and further
+                    information about the topic.
+
+    COPYRIGHT       Copyright note.
+
+    SINCE           Version of the software where this class has been
+                    introduced. This is important for backward
+                    compatibility.
+
+  This is an example of the valid CIPP object comment.
+
+    ##------------------------------------------------------
+    # CIPPOBJECT:
+    #   public: x.example.object
+    #
+    # DESCRIPTION:
+    #   This is an example of the CIPPOBJECT header. This
+    #   text is also used to describe the virtual method.
+    #
+    # NOTE:
+    #   This object requires a properly configured x.config
+    #   file!
+    #
+    # INPUT:
+    #   $id        -- Object ID to be fetched
+    #
+    # OPTIONAL:
+    #   $sort      -- Table column to be assorted.
+    #
+    # REQUIRES:
+    #   data::dumper
+    #
+    # AUTHOR:
+    #   Richard Körber <dev@shredzone.de>
+    #
+    # VERSION:
+    #   V1.0 (2000-08-22)
+    #-------------------------------------------------------
+
+
+A. Legal Stuff and Kudos
+-----------------------------------------------------
+
+  OOPerlDoc is distributed under the GPL (GNU General Public Licence).
+
+  OOPerlDoc is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the
+  Free Software Foundation; either version 2 of the License, or (at your
+  option) any later version.
+
+  OOPerlDoc is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OOPerlDoc; if not, write to the Free Software Foundation,
+  Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+  OOPerlDoc was written by Richard "Shred" Körber for the dimedis GmbH
+  (www.dimedis.de). I want to thank the CEO Mr. Halling for giving me
+  the permission to publish OOPerlDoc under GPL.
+
+    
+B. OOPerlDoc History
+-----------------------------------------------------
+
+   V1.22 (2002-09-13) rkoerber
+     - BUGFIX: OOPerlDoc was caught in an endless loop when
+       a class only consisted of private methods
+     - BUGFIX: Private attributes were not sorted properly to the
+       end of the list
+       
+   V1.21 (2002-07-09) rkoerber
+     - Optionally, the class' source code can be added to the
+       documentation. It is fully linked, but does not have
+       a decent syntax highlighting yet.
+     - Circular inheritance will now be detected and leads to
+       an error instead of an endless loop. [Bug 1435]
+       
+   V1.20 (2002-05-16) rkoerber
+     - Added new block type CIPPOBJECT
+     - Made OOPerlDoc a little more error tolerant (e.g.
+       accepts RETURN, RETURNS and OUTPUT now).
+
+   V1.19 (2002-04-25) rkoerber
+     - ':' is now optional for delimiting method names. If it
+       is ommitted, the last word is taken (which is usually
+       the method name). Anyhow you are encouraged to write a
+       colon!
+     - BUGFIX: when a class just had one private method or
+       one private class method, ooperldoc would hang in an
+       infinite loop. Fixed.
+     - BUGFIX: Class list of certain packets was always empty.
+
+   V1.18 (2002-03-21) rkoerber
+     - Class list by name now shows appropriate package path
+     - Besides '::' now '.' are allowed as package delimiter
+
+   V1.17 (2002-01-31) rkoerber
+     - Now you can select in a third frame, what package classes
+       you want to see.
+     - You can have a view of the class names only.
+
+   V1.16 (2002-01-31) rkoerber
+     - BUGFIX: References to classes in Foo::Bar notation was broken
+       since the very beginning. And no one noticed that...
+     - Now also references to class methods like Foo::Bar->meth() is
+       linked to the appropriate place.
+     - If a class name itself is not known, it is searched in the
+       current packet as well.
+
+   V1.15 (2002-01-31) rkoerber
+     - Deprecated attribute of methods are now also listed in the
+       method summary.
+     - Private method and attribute names (starting with an underscore)
+       are now at the bottom of the method and attribute summary
+     - Attribute summary is now sorted and a little prettier (attribute
+       name comes first, followed by modifiers in brackets)
+     - Method summary sentence now ends with HTML tags or double
+       newlines
+
+   V1.14 (2002-01-25) rkoerber
+     - BUGFIX: THROWS was broken, now fixed again
+
+   V1.13 (2002-01-18) rkoerber
+     - Charset iso-8859-1 set in header
+
+   V1.12 (2001-11-09) rkoerber
+     - BUGFIX: when --private was set, the attribute section was
+       always empty
+     - Attribute section now looks like class method section, and
+       shows appropriate colors for public/protected/private.
+     - Minor BUGFIX with trimming some trailing spaces
+
+   V1.11 (2001-11-09) rkoerber
+     - Lists all known direct subclasses
+     - The superclasses summary now shows the overridden methods
+     - The superclasses title now links to the appropriate class
+
+   V1.10 (2001-11-07) rkoerber
+     - Generated HTML is using stylesheets now
+     - Minor HTML optimizations
+
+   V1.9 (2001-11-06) rkoerber
+     - Added NOTE in class and method headers, to show up important
+       notes which should be read carefully.
+
+   V1.8 (2001-03-13) rkoerber
+     - Translated the source and documentation into English. Improved
+       documentation. Revision bumped to honor this changes.
+     - Now, also URLs with parameters will be recognized and linked.
+      
+   V1.7 (2001-02-06) rkoerber
+     - EXTENDS now also allows to list more than one superclass. But
+       OOPerlDoc only evaluates the first one for now.
+     - Files and directories starting with '.' or '~' will now be
+       ignored. A new option allows to read temporary files though.
+     - REQUIRES added
+     - BUGFIX: The treeview of superclasses contained the '????' at the
+       wrong position when the superclass was not known.
+       
+   V1.6 (2001-02-05) rkoerber
+     - Attribute list: nbsp used on empty cells, so Netscape will render
+       the table properly.
+     - Improved layout for color markings of public, protected and
+       private methods.
+     - OOPerlDoc will bark now if HTML markup is used in a section that
+       does not allow markup.
+     - BUGFIX: recursive reading of directories was only one level deep 
+     - CVS section added to class headers
+
+   V1.5 (2001-01-24) rkoerber
+     - OPTIONAL added
+     - BUGFIX: SINCE blocks were put out twice
+
+   V1.4 (2000-09-01) rkoerber
+     - Color markings of public, protected and private methods
+
+   V1.3 (2000-08-30) rkoerber
+     - Added empty line between two EXTRA comments
+     - Creates links on methods like package::method() now, too
+
+   V1.2 (2000-08-25) rkoerber
+     - BUGFIX: Superclass tree was in reversed order :)
+
+   V1.1 (2000-08-25) rkoerber
+     - Added -t option to set a title
+     - SINCE added
+     - CLASS can be used as alias for NAME now
+     - http links and undef will be recognized
+     - BUGFIX: recursive directory scanning didn't work at all
+
+   V1.0 (2000-08-24) rkoerber
+     - First release
+
